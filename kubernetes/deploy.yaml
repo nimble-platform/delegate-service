@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: Delegate-service
+  name: Delegate-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: Delegate-service
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: Delegate-service
+    spec:
+      containers:
+      - image: nimbleplatform/Delegate-service:IMAGE_TAG
+        imagePullPolicy: Always
+        name: Delegate-service
+        env:
+        - name: ENVIRONMENT
+          value: "prod"
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 400m
+            memory: 512Mi
