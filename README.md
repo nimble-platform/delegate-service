@@ -36,11 +36,11 @@ $ docker build -t nimble-delegate .
 
 ### Configuration
 
-* The Eureka server URL is defined by the `eureka.serviceUrl.default` parameter in the [eureka-client.properties](../blob/master/src/main/resources/eureka-client.properties
+* The Eureka server URL is defined by the `eureka.serviceUrl.default` parameter in the [eureka-client.properties](../master/src/main/resources/eureka-client.properties
 ) file. The default value is `http://eureka:8080/eureka/v2/`.
-* The Eureka `vipAddress` of the Delegate Service is defined by the `eureka.vipAddress` parameter in the [eureka-client.properties](../blob/master/src/main/resources/eureka-client.properties
+* The Eureka `vipAddress` of the Delegate Service is defined by the `eureka.vipAddress` parameter in the [eureka-client.properties](../master/src/main/resources/eureka-client.properties
 ) file and by the `context-param` parameter in the [web.xml](../blob/master/WEB-INF/web.xml) file. The value must be the **same**.
-* The URL path of the main service API (`/serve`) is defined by the `context-param` parameter int the [web.xml](../blob/master/WEB-INF/web.xml) file. The default value is `/serve`. 
+* The URL path of the main service API (`/serve`) is defined by the `context-param` parameter int the [web.xml](../master/WEB-INF/web.xml) file. The default value is `/serve`. 
 
 ### Run the Eureka server
 
