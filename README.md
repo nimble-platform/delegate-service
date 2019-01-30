@@ -8,6 +8,8 @@ On shutdown, the service un-registers from the Eureka server.
 
 ## APIs
 
+The following list specifies the APIs which are supported by the service:
+
 * `/serve?local=0` returns a single response which is a collection of all the responses from all the Nimble clusters.
 
 * `/serve?local=1` returns a local response which is a response of the local Delegate service ONLY (without calling the Delegate services in the other Nimble clusters).
@@ -32,6 +34,14 @@ $ mvn package
 $ docker build -t nimble-delegate .
 ```
 
+### Configuration
+
+* The Eureka server URL is defined by the `eureka.serviceUrl.default` parameter in the [eureka-client.properties](../blob/master/src/main/resources/eureka-client.properties
+) file. The default value is `http://eureka:8080/eureka/v2/`.
+* The Eureka `vipAddress` of the Delegate Service is defined by the `eureka.vipAddress` parameter in the [eureka-client.properties](../blob/master/src/main/resources/eureka-client.properties
+) file and by the `context-param` parameter in the [web.xml](../blob/master/WEB-INF/web.xml) file. The value must be the **same**.
+* The URL path of the main service API (`/serve`) is defined by the `context-param` parameter int the [web.xml](../blob/master/WEB-INF/web.xml) file. The default value is `/serve`. 
+
 ### Run the Eureka server
 
 ```shell
@@ -53,7 +63,7 @@ You should see the Delegate service in the [Dashboard](http://localhost:8080/eur
 ```shell
 $ curl localhost:8888/serve?local=0
 ```
-You should a single JSON response which consists of an array of multiple responses
+You should receive a single JSON response which consists of an array of multiple responses
 
 ### Stop the Delegate Service
 
@@ -61,7 +71,7 @@ You should a single JSON response which consists of an array of multiple respons
 $ docker stop nimble-delegate
 ```
 
-Note: it is better to stop the service before removing it, to let it un-registers gracefully from the Eureka server. If you remove it by using (`docker rm -f`) it will take about 30 minutes (hearbeat timeout period) until the service is removed from the Eureka Server.
+Note: it is better to stop the service before removing it, to let it un-registers gracefully from the Eureka server. If you remove it by using (`docker rm -f`) it will take about 30 seconds (hearbeat timeout period) until the service is removed from the Eureka Server.
 
 ### Remove the Delegate Service
 
