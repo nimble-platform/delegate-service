@@ -16,7 +16,7 @@ The following list specifies the APIs which are supported by the service:
 
 * `/eureka` returns a list of all the Delegate services registered in the Eureka server (used for debug).
 
-## Running the service
+## Running the service on a single machine using Docker
 
 ### Preqrequisites
 
@@ -42,39 +42,48 @@ $ docker build -t nimble-delegate .
 ) file and by the `context-param` parameter in the [web.xml](../blob/master/WEB-INF/web.xml) file. The value must be the **same**.
 * The URL path of the main service API (`/serve`) is defined by the `context-param` parameter int the [web.xml](../master/WEB-INF/web.xml) file. The default value is `/serve`. 
 
+### Create a docker network
+
+```shell
+$ docker network create nimble
+```
+
+This **nimble** network is used to connect all the docker containers
+
 ### Run the Eureka server
 
 ```shell
-$ docker run -d --name eureka -p 8080:8080 netflixoss/eureka:1.3.1
+$ docker run -d --name eureka --net nimble -p 8080:8080 netflixoss/eureka:1.3.1
 ```
 
-### Run the Delegate Service
+Once the Eureka server is running, you can access the Dashboard using the [Dashboard URL](http://localhost:8080/eureka)
+
+### Run the Delegate Services
 
 ```shell
-$ docker run -d -p 8888:8080 --link eureka --name nimble-delegate nimble-delegate 
+$ docker run -d -p 8881:8080 --net nimble --name delegate-1 nimble-delegate 
+$ docker run -d -p 8882:8080 --net nimble --name delegate-2 nimble-delegate 
+$ docker run -d -p 8883:8080 --net nimble --name delegate-3 nimble-delegate 
 ```
-
-### Access the Eureka Server Dashboard
-
-You should see the Delegate service in the [Dashboard](http://localhost:8080/eureka) after a few seconds.
 
 ### Access the Delegate service
 
 ```shell
-$ curl localhost:8888/serve?local=0
-```
-You should receive a single JSON response which consists of an array of multiple responses
-
-### Stop the Delegate Service
-
-```shell
-$ docker stop nimble-delegate
+$ curl localhost:8881/serve?local=0
 ```
 
-Note: it is better to stop the service before removing it, to let it un-registers gracefully from the Eureka server. If you remove it by using (`docker rm -f`) it will take about 30 seconds (hearbeat timeout period) until the service is removed from the Eureka Server.
+You should receive a single JSON response which consists of an array of multiple responses (one from each Delegate service)
 
-### Remove the Delegate Service
+### Stop the Delegate Services
 
 ```shell
-$ docker rm nimble-delegate
+$ docker stop delegate-1 delegate-2 delegate-3
+```
+
+Note: it is better to stop the services before removing them, to let them un-register **gracefully** from the Eureka server. If you remove the service by using (`docker rm -f`) it will take about 30 seconds (hearbeat timeout period) until the service is removed from the Eureka Server.
+
+### Remove the Delegate Services
+
+```shell
+$ docker rm delegate-1 delegate-2 delegate-3
 ```

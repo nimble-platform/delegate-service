@@ -30,6 +30,8 @@ import javax.servlet.ServletContextEvent;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.net.URI;
 
 /**
@@ -40,12 +42,15 @@ import java.net.URI;
 @ApplicationPath("/")
 @Path("/")
 public class Delegate implements ServletContextListener {
+    private static final int REQ_TIMEOUT_SEC = 3;
+
     private static Logger logger = LogManager.getLogger(Delegate.class);
 
     private static ApplicationInfoManager applicationInfoManager;
     private static EurekaClient eurekaClient;
     private static String vipAddress = "delegate.ibm.com";
     private static String urlPath = "/delegate";
+    private static int includeErrorRes = 1;
     private static Client httpClient;
 
     @GET
@@ -63,26 +68,7 @@ public class Delegate implements ServletContextListener {
         }
 
         // Call all the services registered in Eureka with local=1
-        List<ServiceEndpoint> epList = getEndpointsFromEureka();
-        List<ServiceResponse> resList = new ArrayList<ServiceResponse>();
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http").queryParam("local", "1");;
-        for (ServiceEndpoint endpoint : epList) {
-            try {
-                URI uri = uriBuilder.host(endpoint.hostName).port(endpoint.port).path(urlPath).build();
-                Response res = httpClient.target(uri.toString()).request().get();
-                String data = res.readEntity(String.class);
-                resList.add(new ServiceResponse(endpoint.id, data, res.getStatus()));
-            } catch(Exception e) {
-                logger.warn("Failed to call " + endpoint.id + " - " + e.getMessage());
-                // Question - Do you want an entry for error response ? 
-                resList.add(new ServiceResponse(endpoint.id, e.getMessage(), 503)); 
-            }
-        }
-        return Response.status(Response.Status.OK)
-                       .type(MediaType.APPLICATION_JSON)
-                       .entity(resList)
-                       .build();
+        return sendRequestToAllServices();
     }
 
     @GET
@@ -105,7 +91,20 @@ public class Delegate implements ServletContextListener {
         if (param != null) {
             urlPath = param;
         }
-        logger.info("Delegate service is being initialized... vipAddress = " + vipAddress + ", urlPath = " + urlPath);
+
+        param = arg0.getServletContext().getInitParameter("includeErrorResponse");
+        if (param != null && param != "1") {
+            try {
+                includeErrorRes = Integer.parseInt(param);
+            } catch (NumberFormatException e) {
+                logger.warn("Invalid argument for includeErrorResponse - " + e);
+            }
+        }
+
+        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress +
+                    ", urlPath = " + urlPath +
+                    ", includeErrorResponse = " + includeErrorRes +
+                    ")...");
         httpClient = ClientBuilder.newClient();
 
         if (!initEureka()) {
@@ -122,7 +121,7 @@ public class Delegate implements ServletContextListener {
         logger.info("Delegate service has been destroyed");
     }
 
-    // Initialize Eureka client and register the service in the Eureka server
+    // Initializes Eureka client and registers the service with the Eureka server
     private boolean initEureka() {
         try {
            MyDataCenterInstanceConfig instanceConfig = new MyDataCenterInstanceConfig();
@@ -130,7 +129,12 @@ public class Delegate implements ServletContextListener {
            applicationInfoManager = new ApplicationInfoManager(instanceConfig, instanceInfo);
            eurekaClient = new DiscoveryClient(applicationInfoManager, new DefaultEurekaClientConfig());
            applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.UP);
-           logger.info("Delegate has been registered in Eureka: " + instanceInfo.getAppName() + "/" + instanceInfo.getVIPAddress() + "(" + instanceInfo.getId() +") " + instanceInfo.getHostName() + ":" + instanceInfo.getPort());
+           logger.info("Delegate has been registered in Eureka: " +
+                       instanceInfo.getAppName() + "/" +
+                       instanceInfo.getVIPAddress() + "(" +
+                       instanceInfo.getId() +") " +
+                       instanceInfo.getHostName() + ":" +
+                       instanceInfo.getPort());
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -138,7 +142,7 @@ public class Delegate implements ServletContextListener {
         return true;
     }
 
-    // Return a list of Delegate services registered in Eureka server
+    // Returns a list of Delegate services registered in Eureka server
     private List<ServiceEndpoint> getEndpointsFromEureka() {
         List<ServiceEndpoint> dlgList = new ArrayList<ServiceEndpoint>();
         List<InstanceInfo> instsList = eurekaClient.getInstancesByVipAddress(vipAddress, false);
@@ -149,6 +153,46 @@ public class Delegate implements ServletContextListener {
            }
         }
         return dlgList;
+    }
+
+    // Sends the request to all the Delegate services which are registered in the Eureka server
+    private Response sendRequestToAllServices() {
+        List<ServiceEndpoint> epList = getEndpointsFromEureka();
+        List<Future<Response>> fuList = new ArrayList<Future<Response>>();
+
+        for (ServiceEndpoint endpoint : epList) {
+            // Prepare the destination URL
+            UriBuilder uriBuilder = UriBuilder.fromUri("");
+            uriBuilder.scheme("http").queryParam("local", "1");;
+            URI uri = uriBuilder.host(endpoint.hostName).port(endpoint.port).path(urlPath).build();
+            Future<Response> fuRes = httpClient.target(uri.toString()).request().async().get();
+            fuList.add(fuRes);
+        }
+
+        // Wait (one by one) for the responses from all the services
+        List<ServiceResponse> resList = new ArrayList<ServiceResponse>();
+        for(int i = 0; i< fuList.size(); i++) {
+            Future<Response> fuRes = fuList.get(i);
+            ServiceEndpoint endpoint = epList.get(i);
+            try {
+                Response res = fuRes.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+                String data = res.readEntity(String.class);
+                resList.add(new ServiceResponse(endpoint.id, data, res.getStatus()));
+            } catch(Exception e) {
+                logger.warn("Failed to call service: " +  endpoint.id +
+                            " (" + endpoint.hostName +
+                            ":" + endpoint.port + ") - " +
+                            e.getMessage());
+
+                if (includeErrorRes == 1) {
+                    resList.add(new ServiceResponse(endpoint.id, e.getMessage(), 503));
+                }
+            }
+        }
+        return Response.status(Response.Status.OK)
+                       .type(MediaType.APPLICATION_JSON)
+                       .entity(resList)
+                       .build();
     }
 
 }

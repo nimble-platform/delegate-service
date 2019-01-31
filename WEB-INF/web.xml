@@ -26,4 +26,8 @@
      <param-name>urlPath</param-name>
      <param-value>/serve</param-value>
   </context-param>
+  <context-param>
+     <param-name>includeErrorResponse</param-name>
+     <param-value>1</param-value>
+  </context-param>
 </web-app>
