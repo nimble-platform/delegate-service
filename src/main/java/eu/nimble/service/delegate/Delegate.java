@@ -3,41 +3,49 @@ package eu.nimble.service.delegate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.appinfo.ApplicationInfoManager;
-import com.netflix.appinfo.EurekaInstanceConfig;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.appinfo.MyDataCenterInstanceConfig;
 import com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider;
 import com.netflix.discovery.DefaultEurekaClientConfig;
 import com.netflix.discovery.DiscoveryClient;
 import com.netflix.discovery.EurekaClient;
-import com.netflix.discovery.EurekaClientConfig;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.DefaultValue;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletContextEvent;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.io.IOException;
 import java.net.URI;
 
 /**
  * Delegate service.
  *
- * Created by Idan Zach (idanz@il.ibm.com) 01/30/2019.
+ * Created by Nir Rozenbaum (nirro@il.ibm.com) 05/30/2019.
  */
 @ApplicationPath("/")
 @Path("/")
@@ -48,63 +56,26 @@ public class Delegate implements ServletContextListener {
 
     private static ApplicationInfoManager applicationInfoManager;
     private static EurekaClient eurekaClient;
-    private static String vipAddress = "delegate.ibm.com";
-    private static String urlPath = "/delegate";
-    private static int includeErrorRes = 1;
+    private static String vipAddress = "eu.nimble.delegate";
+    
     private static Client httpClient;
-
-    @GET
-    @Path("/serve")
-    public Response serve(
-        @DefaultValue("0") @QueryParam("local") int local) {
-        // local indicates whether it is a local request or delegation request
-        // value of 0 means local request, so the service should just return a local response
-        // value of 1 means delegate request, so the service should call all the services registered in Eureka
-        if (local == 1) {
-            return Response.status(Response.Status.OK)
-                           .type(MediaType.TEXT_PLAIN)
-                           .entity("Hello from " + applicationInfoManager.getInfo().getId() + " " + new Date())
-                           .build();
-        }
-
-        // Call all the services registered in Eureka with local=1
-        return sendRequestToAllServices();
-    }
-
-    @GET
-    @Path("eureka")
-    @Produces({ MediaType.APPLICATION_JSON })
-    // Return the Delegate services registered in Eureka server (Used for debug)
-    public Response eureka() {
-        List<ServiceEndpoint> epList = getEndpointsFromEureka();
-        return Response.status(Response.Status.OK).entity(epList).build();
-    }
-
+    
+    private String indexingServiceUrl;
+    private int indexingServicePort;
+    
+    private static String getItemFieldsUrl = "/item/fields";
+    private static String postItemSearch = "/item/search";
+    
+    
+    /***********************************   Servlet Context   ***********************************/
+    
     public void contextInitialized(ServletContextEvent arg0) 
     {
-        String param = arg0.getServletContext().getInitParameter("vipAddress");
-        if (param != null) {
-            vipAddress = param;
-        }
-
-        param = arg0.getServletContext().getInitParameter("urlPath");
-        if (param != null) {
-            urlPath = param;
-        }
-
-        param = arg0.getServletContext().getInitParameter("includeErrorResponse");
-        if (param != null && param != "1") {
-            try {
-                includeErrorRes = Integer.parseInt(param);
-            } catch (NumberFormatException e) {
-                logger.warn("Invalid argument for includeErrorResponse - " + e);
-            }
-        }
-
-        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress +
-                    ", urlPath = " + urlPath +
-                    ", includeErrorResponse = " + includeErrorRes +
-                    ")...");
+        indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+        indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+        
+        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with indexing service param = " + indexingServiceUrl + ":" + indexingServicePort + "...");
+        
         httpClient = ClientBuilder.newClient();
 
         if (!initEureka()) {
@@ -120,79 +91,286 @@ public class Delegate implements ServletContextListener {
         applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.DOWN);
         logger.info("Delegate service has been destroyed");
     }
+    
+    /***********************************   Servlet Context - END   ***********************************/
+    
+    
+    @GET
+    @Path("/")
+    public Response hello() {
+        return Response.status(Status.OK).type(MediaType.TEXT_PLAIN).entity("Hello from Delegate Service\n").build();
+    }
+    
+    
+    /***********************************   indexing-service/item/fields   ***********************************/
+    
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/item/fields")
+    public Response federatedGetItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    	logger.info("called federated get item fields");
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	if (fieldName != null && !fieldName.isEmpty()) {
+    		queryParams.put("fieldName", fieldName);
+        }
+    	logger.info("query params: " + queryParams.toString());
+    	
+    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/item/fields/local", queryParams);
+    	
+    	List<Object> aggregatedResults = new LinkedList<Object>();
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	for (String results : resultList.values()) {
+    		if (results == null || results.isEmpty()) {
+				continue;
+			}
+    		List<Map<String, Object>> json;
+			try {
+				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				for (int i=0; i<json.size(); ++i) {
+					Map<String, Object> jsonObject = json.get(i);
+					String key = jsonObject.get("fieldName").toString();
+					if (!aggregatedResults.contains(key)) {
+						aggregatedResults.add(jsonObject);
+					}
+				}
+			} catch (IOException e) {
+				logger.warn("failed to read response json " + e.getMessage());
+			}
+    	}
+    	
+    	return Response.status(Response.Status.OK)
+    							.type(MediaType.APPLICATION_JSON)
+    							.entity(aggregatedResults)
+    							.build();
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
+    @GET
+    @Path("/item/fields/local")
+    public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    	// Prepare the destination URL for the local request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        if (fieldName != null && !fieldName.isEmpty()) {
+        	uriBuilder.queryParam("fieldName", fieldName);
+        }
+        
+        
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getItemFieldsUrl).build();
+        
+        logger.info("got a request to endpoint /item/fields/local, forwarding to " + uri.toString());
+        
+        Response response = httpClient.target(uri.toString()).request().get();
+        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
+        	String data = response.readEntity(String.class);
+            return Response.status(Status.OK)
+            				.entity(data)
+            				.type(MediaType.APPLICATION_JSON)
+            				.build();
+        }
+        else {
+        	return response;
+        }
+    }
+    
+    /***********************************   indexing-service/item/fields - END   ***********************************/
+    
 
-    // Initializes Eureka client and registers the service with the Eureka server
+    /***********************************   indexing-service/item/search   ***********************************/
+    
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/item/search")
+    public Response federatedPostItemSearch(Map<String, Object> body) {
+    	logger.info("called federated post item search");
+    	
+    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices("/item/search/local", body);
+    	
+    	List<Object> aggregatedResults = new LinkedList<Object>();
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	for (String results : resultList.values()) {
+    		if (results == null || results.isEmpty()) {
+				continue;
+			}
+    		List<Map<String, Object>> json;
+			try {
+				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				for (int i=0; i<json.size(); ++i) {
+					Map<String, Object> jsonObject = json.get(i);
+					aggregatedResults.add(jsonObject);
+				}
+			} catch (IOException e) {
+				logger.warn("failed to read response json " + e.getMessage());
+			}
+    	}
+    	
+    	return Response.status(Response.Status.OK)
+    							.type(MediaType.APPLICATION_JSON)
+    							.entity(aggregatedResults)
+    							.build();
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/item/search/local")
+    public Response postItemSearch(Map<String, Object> body) {
+    	// Prepare the destination URL for the local request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postItemSearch).build();
+        
+        logger.info("got a request to endpoint /item/search/local, forwarding to " + uri.toString() + " with body: " + body.toString());
+        
+        Response response = httpClient.target(uri.toString()).request().post(Entity.json(body));
+        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
+        	String data = response.readEntity(String.class);
+            return Response.status(Status.OK)
+            				.entity(data)
+            				.type(MediaType.APPLICATION_JSON)
+            				.build();
+        }
+        else {
+        	return response;
+        }
+    }
+    
+    
+    
+    /***********************************   indexing-service/item/search - END   ***********************************/
+    
+    
+    /***********************************   Http Requests   ***********************************/
+    
+    // Sends the get request to all the Delegate services which are registered in the Eureka server
+    private HashMap<ServiceEndpoint, String> sendGetRequestToAllServices(String urlPath, HashMap<String, List<String>> queryParams) {
+    	logger.info("send get requests to all delegates");
+    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+        List<Future<Response>> futureList = new ArrayList<Future<Response>>();
+
+        for (ServiceEndpoint endpoint : endpointList) {
+            // Prepare the destination URL
+            UriBuilder uriBuilder = UriBuilder.fromUri("");
+            uriBuilder.scheme("http");
+            // add all query params to the request
+            for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
+            	for (String paramValue : queryParam.getValue()) {
+            		uriBuilder.queryParam(queryParam.getKey(), paramValue);
+            	}
+            }
+            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            logger.info("sending the request to " + endpoint.toString() + "...");
+            Future<Response> result = httpClient.target(uri.toString()).request().async().get();
+            futureList.add(result);
+        }
+        return getResponseListFromAllDelegates(endpointList, futureList);
+    }
+    
+    // Sends the post request to all the Delegate services which are registered in the Eureka server
+    private HashMap<ServiceEndpoint, String> sendPostRequestToAllServices(String urlPath, Map<String, Object> body) {
+    	logger.info("send post requests to all delegates");
+    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+        List<Future<Response>> futureList = new ArrayList<Future<Response>>();
+
+        for (ServiceEndpoint endpoint : endpointList) {
+            // Prepare the destination URL
+            UriBuilder uriBuilder = UriBuilder.fromUri("");
+            uriBuilder.scheme("http");
+            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            logger.info("sending the request to " + endpoint.toString() + "...");
+            Future<Response> result = httpClient.target(uri.toString()).request().async().post(Entity.json(body));
+            futureList.add(result);
+        }
+        return getResponseListFromAllDelegates(endpointList, futureList);
+    }
+    
+    // get responses from all Delegate services which are registered in the Eureka server
+    private HashMap<ServiceEndpoint, String> getResponseListFromAllDelegates(List<ServiceEndpoint> endpointList, List<Future<Response>> futureList) {
+        // Wait (one by one) for the responses from all the services
+        HashMap<ServiceEndpoint, String> resList = new HashMap<ServiceEndpoint, String>();
+        for(int i = 0; i< futureList.size(); i++) {
+            Future<Response> response = futureList.get(i);
+            ServiceEndpoint endpoint = endpointList.get(i);
+            logger.info("got response from " + endpoint.toString());
+            try {
+            	Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+                String data = res.readEntity(String.class);
+                resList.put(endpoint, data);
+            } catch(Exception e) {
+                logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +
+                			" appName:" + endpoint.getAppName() +
+                            " (" + endpoint.getHostName() +
+                            ":" + endpoint.getPort() + ") - " +
+                            e.getMessage());
+            }
+        }
+        logger.info("aggregated results: \n" + resList.toString());
+        return resList;
+    }
+    
+    /***********************************   Http Requests - END   ***********************************/
+    
+    /***********************************   Eureka   ***********************************/
+    
+    
+    @GET
+    @Path("eureka")
+    @Produces({ MediaType.APPLICATION_JSON })
+    // Return the Delegate services registered in Eureka server (Used for debug)
+    public Response eureka() {
+        List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+        return Response.status(Response.Status.OK).entity(endpointList).build();
+    }
+    
+    /***********************************   Eureka   ***********************************/
+    
+ // Initializes Eureka client and registers the service with the Eureka server
+    
     private boolean initEureka() {
         try {
-           MyDataCenterInstanceConfig instanceConfig = new MyDataCenterInstanceConfig();
-           InstanceInfo instanceInfo = new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get();
-           applicationInfoManager = new ApplicationInfoManager(instanceConfig, instanceInfo);
-           eurekaClient = new DiscoveryClient(applicationInfoManager, new DefaultEurekaClientConfig());
-           applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.UP);
-           logger.info("Delegate has been registered in Eureka: " +
-                       instanceInfo.getAppName() + "/" +
-                       instanceInfo.getVIPAddress() + "(" +
-                       instanceInfo.getId() +") " +
-                       instanceInfo.getHostName() + ":" +
-                       instanceInfo.getPort());
+        	logger.info("trying to init eureka client");
+        	MyDataCenterInstanceConfig instanceConfig = new MyDataCenterInstanceConfig();
+        	InstanceInfo instanceInfo = new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get();
+        	applicationInfoManager = new ApplicationInfoManager(instanceConfig, instanceInfo);
+        	eurekaClient = new DiscoveryClient(applicationInfoManager, new DefaultEurekaClientConfig());
+        	applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.UP);
+        	logger.info("Delegate has been registered in Eureka: " +
+        				instanceInfo.getAppName() + "/" +
+        				instanceInfo.getVIPAddress() + "(" +
+        				instanceInfo.getId() +") " +
+        				instanceInfo.getHostName() + ":" +
+        				instanceInfo.getPort());
         } catch (Exception e) {
-            e.printStackTrace();
+        	logger.error(e.getMessage());
+        	e.printStackTrace();
             return false;
         }
         return true;
     }
-
+    
+    
+    
     // Returns a list of Delegate services registered in Eureka server
     private List<ServiceEndpoint> getEndpointsFromEureka() {
-        List<ServiceEndpoint> dlgList = new ArrayList<ServiceEndpoint>();
-        List<InstanceInfo> instsList = eurekaClient.getInstancesByVipAddress(vipAddress, false);
-        for (InstanceInfo ii : instsList) {
+        List<ServiceEndpoint> delegateList = new ArrayList<ServiceEndpoint>();
+        List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddress(vipAddress, false);
+        for (InstanceInfo info : instanceList) {
            // Filter out services that are not UP
-           if (ii.getStatus() == InstanceInfo.InstanceStatus.UP) {
-               dlgList.add(new ServiceEndpoint(ii.getId(), ii.getHostName(), ii.getPort()));
+           if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
+               delegateList.add(new ServiceEndpoint(info.getId(), info.getHostName(), info.getPort(), info.getAppName()));
            }
         }
-        return dlgList;
+        return delegateList;
     }
-
-    // Sends the request to all the Delegate services which are registered in the Eureka server
-    private Response sendRequestToAllServices() {
-        List<ServiceEndpoint> epList = getEndpointsFromEureka();
-        List<Future<Response>> fuList = new ArrayList<Future<Response>>();
-
-        for (ServiceEndpoint endpoint : epList) {
-            // Prepare the destination URL
-            UriBuilder uriBuilder = UriBuilder.fromUri("");
-            uriBuilder.scheme("http").queryParam("local", "1");;
-            URI uri = uriBuilder.host(endpoint.hostName).port(endpoint.port).path(urlPath).build();
-            Future<Response> fuRes = httpClient.target(uri.toString()).request().async().get();
-            fuList.add(fuRes);
-        }
-
-        // Wait (one by one) for the responses from all the services
-        List<ServiceResponse> resList = new ArrayList<ServiceResponse>();
-        for(int i = 0; i< fuList.size(); i++) {
-            Future<Response> fuRes = fuList.get(i);
-            ServiceEndpoint endpoint = epList.get(i);
-            try {
-                Response res = fuRes.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
-                String data = res.readEntity(String.class);
-                resList.add(new ServiceResponse(endpoint.id, data, res.getStatus()));
-            } catch(Exception e) {
-                logger.warn("Failed to call service: " +  endpoint.id +
-                            " (" + endpoint.hostName +
-                            ":" + endpoint.port + ") - " +
-                            e.getMessage());
-
-                if (includeErrorRes == 1) {
-                    resList.add(new ServiceResponse(endpoint.id, e.getMessage(), 503));
-                }
-            }
-        }
-        return Response.status(Response.Status.OK)
-                       .type(MediaType.APPLICATION_JSON)
-                       .entity(resList)
-                       .build();
-    }
-
+    
+    /***********************************   Eureka - END   ***********************************/
+    
+    /***********************************   Eureka - END   ***********************************/
 }

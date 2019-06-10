@@ -20,7 +20,7 @@
   </listener>
   <context-param>
      <param-name>vipAddress</param-name>
-     <param-value>delegate.nimble.ibm</param-value>
+     <param-value>eu.nimble.delegate</param-value>
   </context-param>
   <context-param>
      <param-name>urlPath</param-name>
