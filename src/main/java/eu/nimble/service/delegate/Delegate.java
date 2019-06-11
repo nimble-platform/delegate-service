@@ -63,8 +63,9 @@ public class Delegate implements ServletContextListener {
     private String indexingServiceUrl;
     private int indexingServicePort;
     
-    private static String getItemFieldsUrl = "/item/fields";
-    private static String postItemSearch = "/item/search";
+    private static String getItemFieldsPath = "/item/fields";
+    private static String postItemSearchPath = "/item/search";
+    private static String postPartySearchPath = "/party/search";
     
     
     /***********************************   Servlet Context   ***********************************/
@@ -159,7 +160,7 @@ public class Delegate implements ServletContextListener {
         }
         
         
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getItemFieldsUrl).build();
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getItemFieldsPath).build();
         
         logger.info("got a request to endpoint /item/fields/local, forwarding to " + uri.toString());
         
@@ -225,11 +226,75 @@ public class Delegate implements ServletContextListener {
     	// Prepare the destination URL for the local request
         UriBuilder uriBuilder = UriBuilder.fromUri("");
         uriBuilder.scheme("http");
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postItemSearch).build();
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postItemSearchPath).build();
         
-        logger.info("got a request to endpoint /item/search/local, forwarding to " + uri.toString() + " with body: " + body.toString());
+        return forwardPostRequest("/item/search/local", uri.toString(), body);
+    }
+    
+    /***********************************   indexing-service/item/search - END   ***********************************/
+    
+    
+    /***********************************   indexing-service/party/search   ***********************************/
+    
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/party/search")
+    public Response federatedPostPartySearch(Map<String, Object> body) {
+    	logger.info("called federated post party search");
+    	
+    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices("/party/search/local", body);
+    	
+    	List<Object> aggregatedResults = new LinkedList<Object>();
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	for (String results : resultList.values()) {
+    		if (results == null || results.isEmpty()) {
+				continue;
+			}
+    		List<Map<String, Object>> json;
+			try {
+				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				for (int i=0; i<json.size(); ++i) {
+					Map<String, Object> jsonObject = json.get(i);
+					aggregatedResults.add(jsonObject);
+				}
+			} catch (IOException e) {
+				logger.warn("failed to read response json " + e.getMessage());
+			}
+    	}
+    	
+    	return Response.status(Response.Status.OK)
+    							.type(MediaType.APPLICATION_JSON)
+    							.entity(aggregatedResults)
+    							.build();
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/party/search/local")
+    public Response postPartySearch(Map<String, Object> body) {
+    	// Prepare the destination URL for the local request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postPartySearchPath).build();
         
-        Response response = httpClient.target(uri.toString()).request().post(Entity.json(body));
+        return forwardPostRequest("/party/search/local", uri.toString(), body);
+    }
+    
+    /***********************************   indexing-service/party/search - END   ***********************************/
+    
+    
+    /***********************************   Http Requests   ***********************************/
+    
+    // forward post request
+    private Response forwardPostRequest(String from, String to, Map<String, Object> body) {
+    	logger.info("got a request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
+        
+        Response response = httpClient.target(to).request().post(Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
             return Response.status(Status.OK)
@@ -241,13 +306,6 @@ public class Delegate implements ServletContextListener {
         	return response;
         }
     }
-    
-    
-    
-    /***********************************   indexing-service/item/search - END   ***********************************/
-    
-    
-    /***********************************   Http Requests   ***********************************/
     
     // Sends the get request to all the Delegate services which are registered in the Eureka server
     private HashMap<ServiceEndpoint, String> sendGetRequestToAllServices(String urlPath, HashMap<String, List<String>> queryParams) {
@@ -317,6 +375,7 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   Http Requests - END   ***********************************/
     
+    
     /***********************************   Eureka   ***********************************/
     
     
@@ -331,7 +390,7 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   Eureka   ***********************************/
     
- // Initializes Eureka client and registers the service with the Eureka server
+    // Initializes Eureka client and registers the service with the Eureka server
     
     private boolean initEureka() {
         try {
@@ -369,8 +428,6 @@ public class Delegate implements ServletContextListener {
         }
         return delegateList;
     }
-    
-    /***********************************   Eureka - END   ***********************************/
     
     /***********************************   Eureka - END   ***********************************/
 }
