@@ -72,9 +72,14 @@ public class Delegate implements ServletContextListener {
     
     public void contextInitialized(ServletContextEvent arg0) 
     {
-        indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
-        indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-        
+    	try {
+    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    	}
+    	catch (Exception ex) {
+    		logger.warn("env vars are not set as expected");
+    	}
+    	
         logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with indexing service param = " + indexingServiceUrl + ":" + indexingServicePort + "...");
         
         httpClient = ClientBuilder.newClient();
