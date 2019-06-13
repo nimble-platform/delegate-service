@@ -3,7 +3,11 @@ package eu.nimble.service.delegate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.netflix.appinfo.ApplicationInfoManager;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.appinfo.MyDataCenterInstanceConfig;
@@ -25,6 +29,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response;
@@ -60,12 +66,15 @@ public class Delegate implements ServletContextListener {
     
     private static Client httpClient;
     
-    private String indexingServiceUrl;
-    private int indexingServicePort;
+    private static String indexingServiceUrl;
+    private static int indexingServicePort;
     
     private static String getItemFieldsPath = "/item/fields";
     private static String postItemSearchPath = "/item/search";
     private static String postPartySearchPath = "/party/search";
+    
+    private static ObjectMapper mapper = new ObjectMapper();
+    private static JsonParser jsonParser = new JsonParser();
     
     
     /***********************************   Servlet Context   ***********************************/
@@ -75,6 +84,8 @@ public class Delegate implements ServletContextListener {
     	try {
     		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
     		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+//    		indexingServiceUrl = "161.156.70.122";
+//    		indexingServicePort = 9101;
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -175,6 +186,7 @@ public class Delegate implements ServletContextListener {
             return Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
+            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
             				.build();
         }
         else {
@@ -185,40 +197,66 @@ public class Delegate implements ServletContextListener {
     /***********************************   indexing-service/item/fields - END   ***********************************/
     
 
-    /***********************************   indexing-service/item/search   ***********************************/
+    /***********************************   indexing-service/item/search   
+     * @throws IOException 
+     * @throws JsonMappingException 
+     * @throws JsonParseException ***********************************/
     
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/item/search")
-    public Response federatedPostItemSearch(Map<String, Object> body) {
+    public Response federatedPostItemSearch(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated post item search");
+    	//initialize result from the request body
+    	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
+    																			Integer.parseInt(body.get("start").toString())); 
+    	HashMap<ServiceEndpoint, String> resultList = getPostItemSearchAggregatedResults(body);
     	
-    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices("/item/search/local", body);
-    	
-    	List<Object> aggregatedResults = new LinkedList<Object>();
-    	ObjectMapper mapper = new ObjectMapper();
-    	
-    	for (String results : resultList.values()) {
+    	for (ServiceEndpoint endpoint : resultList.keySet()) {
+    		String results = resultList.get(endpoint);
     		if (results == null || results.isEmpty()) {
 				continue;
 			}
-    		List<Map<String, Object>> json;
-			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-				for (int i=0; i<json.size(); ++i) {
-					Map<String, Object> jsonObject = json.get(i);
-					aggregatedResults.add(jsonObject);
-				}
-			} catch (IOException e) {
-				logger.warn("failed to read response json " + e.getMessage());
-			}
+    		JsonObject jsonObject = jsonParser.parse(results).getAsJsonObject();
+    		// summarize totalElements
+			indexingServiceResult.addToTotalElements(jsonObject.get("totalElements").getAsInt());
+			// prepare result field for merge later
+			indexingServiceResult.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
+			// merge facets
+			indexingServiceResult.addFacets(jsonObject.get("facets"));
     	}
-    	
     	return Response.status(Response.Status.OK)
     							.type(MediaType.APPLICATION_JSON)
-    							.entity(aggregatedResults)
+    							.entity(indexingServiceResult.getFinalResult())
     							.build();
+    }
+    
+    @SuppressWarnings("unchecked")
+	private HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
+    	int requestedPageSize = Integer.parseInt(body.get("rows").toString()); // save it before manipulating
+    	// manipulate body in order to get results from all delegates.
+    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+    	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
+    	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, "/item/search/local", body);
+    	
+    	int sumTotalElements = 0;
+    	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
+    		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
+    		sumTotalElements += Integer.parseInt(json.get("totalElements").toString());
+    	}
+    	if (sumTotalElements < requestedPageSize) {
+    		body.put("rows", requestedPageSize); 
+    		return sendPostRequestToAllServices(endpointList, "/item/search/local", body);
+    	}
+    	// else, we need to decide how many results we want from each delegate
+    	int numOfAggregatedResults = 0;
+    	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
+    		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
+    		int delegateTotalElements = Integer.parseInt(json.get("totalElements").toString());
+    	}
+    	
+    	return null;
     }
     
     // a REST call that should be used between delegates. 
@@ -233,7 +271,10 @@ public class Delegate implements ServletContextListener {
         uriBuilder.scheme("http");
         URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postItemSearchPath).build();
         
-        return forwardPostRequest("/item/search/local", uri.toString(), body);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
+        headers.add("Content-Type", "application/json");
+        
+        return forwardPostRequest("/item/search/local", uri.toString(), body, headers);
     }
     
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -241,38 +282,37 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   indexing-service/party/search   ***********************************/
     
-    @POST
+	@POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search")
     public Response federatedPostPartySearch(Map<String, Object> body) {
     	logger.info("called federated post party search");
+    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+    	//initialize result from the request body
+    	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
+    																			Integer.parseInt(body.get("start").toString()));
     	
-    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices("/party/search/local", body);
+    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices(endpointList, "/party/search/local", body);
     	
-    	List<Object> aggregatedResults = new LinkedList<Object>();
-    	ObjectMapper mapper = new ObjectMapper();
-    	
-    	for (String results : resultList.values()) {
+    	for (ServiceEndpoint endpoint : resultList.keySet()) {
+    		String results = resultList.get(endpoint);
     		if (results == null || results.isEmpty()) {
 				continue;
 			}
-    		List<Map<String, Object>> json;
-			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-				for (int i=0; i<json.size(); ++i) {
-					Map<String, Object> jsonObject = json.get(i);
-					aggregatedResults.add(jsonObject);
-				}
-			} catch (IOException e) {
-				logger.warn("failed to read response json " + e.getMessage());
-			}
+    		JsonObject jsonObject = jsonParser.parse(results).getAsJsonObject();
+    		// summarize totalElements
+			indexingServiceResult.addToTotalElements(jsonObject.get("totalElements").getAsInt());
+			// prepare result field for merge later
+			indexingServiceResult.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
+			// merge facets
+			indexingServiceResult.addFacets(jsonObject.get("facets"));
     	}
-    	
     	return Response.status(Response.Status.OK)
     							.type(MediaType.APPLICATION_JSON)
-    							.entity(aggregatedResults)
+    							.entity(indexingServiceResult.getFinalResult())
     							.build();
+    	
     }
     
     // a REST call that should be used between delegates. 
@@ -285,9 +325,13 @@ public class Delegate implements ServletContextListener {
     	// Prepare the destination URL for the local request
         UriBuilder uriBuilder = UriBuilder.fromUri("");
         uriBuilder.scheme("http");
+        
         URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postPartySearchPath).build();
         
-        return forwardPostRequest("/party/search/local", uri.toString(), body);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
+        headers.add("Content-Type", "application/json");
+        
+        return forwardPostRequest("/party/search/local", uri.toString(), body, headers);
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
@@ -296,15 +340,16 @@ public class Delegate implements ServletContextListener {
     /***********************************   Http Requests   ***********************************/
     
     // forward post request
-    private Response forwardPostRequest(String from, String to, Map<String, Object> body) {
+    private Response forwardPostRequest(String from, String to, Map<String, Object> body, MultivaluedMap<String, Object> headers) {
     	logger.info("got a request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
         
-        Response response = httpClient.target(to).request().post(Entity.json(body));
+        Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
             return Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
+            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
             				.build();
         }
         else {
@@ -337,9 +382,8 @@ public class Delegate implements ServletContextListener {
     }
     
     // Sends the post request to all the Delegate services which are registered in the Eureka server
-    private HashMap<ServiceEndpoint, String> sendPostRequestToAllServices(String urlPath, Map<String, Object> body) {
+    private HashMap<ServiceEndpoint, String> sendPostRequestToAllServices(List<ServiceEndpoint> endpointList, String urlPath, Map<String, Object> body) {
     	logger.info("send post requests to all delegates");
-    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
@@ -365,6 +409,7 @@ public class Delegate implements ServletContextListener {
             try {
             	Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
                 String data = res.readEntity(String.class);
+                endpoint.setIndexingServiceUrl(res.getHeaderString("indexingSerivceUrl"));
                 resList.put(endpoint, data);
             } catch(Exception e) {
                 logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +
