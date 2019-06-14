@@ -6,8 +6,6 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.netflix.appinfo.ApplicationInfoManager;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.appinfo.MyDataCenterInstanceConfig;
@@ -74,7 +72,7 @@ public class Delegate implements ServletContextListener {
     private static String postPartySearchPath = "/party/search";
     
     private static ObjectMapper mapper = new ObjectMapper();
-    private static JsonParser jsonParser = new JsonParser();
+    
     
     
     /***********************************   Servlet Context   ***********************************/
@@ -82,10 +80,10 @@ public class Delegate implements ServletContextListener {
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
-    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-//    		indexingServiceUrl = "161.156.70.122";
-//    		indexingServicePort = 9101;
+//    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+//    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		indexingServiceUrl = "161.156.70.122";
+    		indexingServicePort = 9101;
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -115,7 +113,10 @@ public class Delegate implements ServletContextListener {
     @GET
     @Path("/")
     public Response hello() {
-        return Response.status(Status.OK).type(MediaType.TEXT_PLAIN).entity("Hello from Delegate Service\n").build();
+        return Response.status(Status.OK)
+        			   .type(MediaType.TEXT_PLAIN)
+        			   .entity("Hello from Delegate Service\n")
+        			   .build();
     }
     
     
@@ -157,9 +158,9 @@ public class Delegate implements ServletContextListener {
     	}
     	
     	return Response.status(Response.Status.OK)
-    							.type(MediaType.APPLICATION_JSON)
-    							.entity(aggregatedResults)
-    							.build();
+    				   .type(MediaType.APPLICATION_JSON)
+    				   .entity(aggregatedResults)
+    				   .build();
     }
     
     // a REST call that should be used between delegates. 
@@ -184,10 +185,10 @@ public class Delegate implements ServletContextListener {
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
             return Response.status(Status.OK)
-            				.entity(data)
-            				.type(MediaType.APPLICATION_JSON)
-            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
-            				.build();
+            			   .entity(data)
+            			   .type(MediaType.APPLICATION_JSON)
+            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
+            			   .build();
         }
         else {
         	return response;
@@ -197,11 +198,11 @@ public class Delegate implements ServletContextListener {
     /***********************************   indexing-service/item/fields - END   ***********************************/
     
 
-    /***********************************   indexing-service/item/search   
-     * @throws IOException 
+    /***********************************   indexing-service/item/search   ***********************************/   
+     /* @throws IOException 
      * @throws JsonMappingException 
-     * @throws JsonParseException ***********************************/
-    
+     * @throws JsonParseException 
+    */
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
@@ -215,21 +216,12 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		if (results == null || results.isEmpty()) {
-				continue;
-			}
-    		JsonObject jsonObject = jsonParser.parse(results).getAsJsonObject();
-    		// summarize totalElements
-			indexingServiceResult.addToTotalElements(jsonObject.get("totalElements").getAsInt());
-			// prepare result field for merge later
-			indexingServiceResult.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
-			// merge facets
-			indexingServiceResult.addFacets(jsonObject.get("facets"));
+    		indexingServiceResult.addEndpointResponse(endpoint, results);
     	}
     	return Response.status(Response.Status.OK)
-    							.type(MediaType.APPLICATION_JSON)
-    							.entity(indexingServiceResult.getFinalResult())
-    							.build();
+    								   .type(MediaType.APPLICATION_JSON)
+    								   .entity(indexingServiceResult.getFinalResult())
+    								   .build();
     }
     
     @SuppressWarnings("unchecked")
@@ -245,7 +237,7 @@ public class Delegate implements ServletContextListener {
     		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
     		sumTotalElements += Integer.parseInt(json.get("totalElements").toString());
     	}
-    	if (sumTotalElements < requestedPageSize) {
+    	if (sumTotalElements <= requestedPageSize) {
     		body.put("rows", requestedPageSize); 
     		return sendPostRequestToAllServices(endpointList, "/item/search/local", body);
     	}
@@ -281,12 +273,15 @@ public class Delegate implements ServletContextListener {
     
     
     /***********************************   indexing-service/party/search   ***********************************/
-    
+     /* @throws IOException 
+     * @throws JsonMappingException 
+     * @throws JsonParseException 
+    */
 	@POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search")
-    public Response federatedPostPartySearch(Map<String, Object> body) {
+    public Response federatedPostPartySearch(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated post party search");
     	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
     	//initialize result from the request body
@@ -297,21 +292,12 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		if (results == null || results.isEmpty()) {
-				continue;
-			}
-    		JsonObject jsonObject = jsonParser.parse(results).getAsJsonObject();
-    		// summarize totalElements
-			indexingServiceResult.addToTotalElements(jsonObject.get("totalElements").getAsInt());
-			// prepare result field for merge later
-			indexingServiceResult.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
-			// merge facets
-			indexingServiceResult.addFacets(jsonObject.get("facets"));
+    		indexingServiceResult.addEndpointResponse(endpoint, results);
     	}
     	return Response.status(Response.Status.OK)
-    							.type(MediaType.APPLICATION_JSON)
-    							.entity(indexingServiceResult.getFinalResult())
-    							.build();
+    								   .type(MediaType.APPLICATION_JSON)
+    								   .entity(indexingServiceResult.getFinalResult())
+    								   .build();
     	
     }
     

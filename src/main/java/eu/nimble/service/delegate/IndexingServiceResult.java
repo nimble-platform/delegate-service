@@ -1,22 +1,41 @@
 package eu.nimble.service.delegate;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+/**
+ * Indexing Service Result
+ *
+ * Created by Nir Rozenbaum (nirro@il.ibm.com) 06/12/2019.
+ */
 
 public class IndexingServiceResult {
+	// response fields
 	private int totalElements;
 	private int totalPages;
 	private int pageSize;
 	private int currentPage;
-	private List <JsonObject> result;
+	private JsonArray result;
 	private JsonObject facets;
+	// response fields end
+	
+	private JsonParser jsonParser;
+	private Gson gson;
+	private ObjectMapper mapper;
 	
 	private ArrayList<ServiceEndpoint> endpointsArray;
 	private Map<ServiceEndpoint, LinkedList<JsonObject>> resultsPerEndpoint;
@@ -26,19 +45,31 @@ public class IndexingServiceResult {
 		totalPages = 0;
 		pageSize = rows;
     	currentPage = start;
-    	result = new LinkedList<JsonObject>();
+    	result = new JsonArray();
     	facets = null;
+    	
+    	jsonParser = new JsonParser();
+    	gson = new GsonBuilder().serializeNulls().create(); // we want to keep null fields in the response
+    	mapper = new ObjectMapper();
     	
     	endpointsArray = new ArrayList<ServiceEndpoint>();
     	resultsPerEndpoint = new LinkedHashMap<ServiceEndpoint, LinkedList<JsonObject>>();
-    
 	}
 	
-	public void addToTotalElements(int count) {
-		this.totalElements += count;
+	public void addEndpointResponse(ServiceEndpoint endpoint, String responseJson) {
+		if (responseJson == null || responseJson.isEmpty()) {
+			return;
+		}
+		JsonObject jsonObject = jsonParser.parse(responseJson).getAsJsonObject();
+		// summarize totalElements
+		this.totalElements += jsonObject.get("totalElements").getAsInt();
+		// prepare result field for merge later while calculating final result
+		this.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
+		// merge facets
+		this.addFacets(jsonObject.get("facets"));
 	}
 	
-	public void addEndpointResults(ServiceEndpoint endpoint, JsonArray resultArray) {
+	private void addEndpointResults(ServiceEndpoint endpoint, JsonArray resultArray) {
 		LinkedList<JsonObject> resultArrayInList = new LinkedList<JsonObject>();
 		for (JsonElement element : resultArray) {
 			JsonObject elementAsObj = element.getAsJsonObject();
@@ -54,11 +85,7 @@ public class IndexingServiceResult {
 		this.result.add(resultToAdd);
 	}
 	
-	public int getPageSize() {
-		return this.pageSize;
-	}
-	
-	public void addFacets(JsonElement facetsToAddElement) {
+	private void addFacets(JsonElement facetsToAddElement) {
 		if (facetsToAddElement == null) {
 			return;
 		}
@@ -125,7 +152,8 @@ public class IndexingServiceResult {
 	}
 	
 	
-	public Map<String, Object> getFinalResult() {
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getFinalResult() throws JsonParseException, JsonMappingException, IOException {
 		Map<String, Object> aggregatedResults = new LinkedHashMap<String, Object>();
 		
 		this.totalPages = (int) Math.ceil(((double)this.totalElements)/ this.pageSize);
@@ -133,15 +161,15 @@ public class IndexingServiceResult {
 		// merge results based on the data that was added to this object 
 		int index = 0;
     	while (!endpointsArray.isEmpty()) {
+    		index = index % endpointsArray.size();
     		ServiceEndpoint endpoint = endpointsArray.get(index);
     		LinkedList<JsonObject> results = resultsPerEndpoint.get(endpoint);
     		if (!results.isEmpty()) {
     			addResult(results.removeFirst());
-    			index = (index+1) % endpointsArray.size();
+    			index++;
     		}
     		else {
     			endpointsArray.remove(index);
-    			index = index % endpointsArray.size();
     		}
     	}
 		
@@ -149,8 +177,15 @@ public class IndexingServiceResult {
 		aggregatedResults.put("totalPages", this.totalPages);
 		aggregatedResults.put("pageSize", this.pageSize);
 		aggregatedResults.put("currentPage", this.currentPage);
-		aggregatedResults.put("result", this.result);
-		aggregatedResults.put("facets", this.facets);
+		
+		String resultStr = gson.toJson(this.result);
+		List<Map<String, Object>> resultList;
+		resultList = mapper.readValue(resultStr, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+		aggregatedResults.put("result", resultList);
+		
+		String facetsStr = gson.toJson(this.facets);
+		Map<String, Object> facetsMap = mapper.readValue(facetsStr, Map.class);
+		aggregatedResults.put("facets", facetsMap);
 		
 		return aggregatedResults;
 	}
