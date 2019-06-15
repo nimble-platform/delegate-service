@@ -80,10 +80,10 @@ public class Delegate implements ServletContextListener {
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-//    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
-//    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-    		indexingServiceUrl = "161.156.70.122";
-    		indexingServicePort = 9101;
+    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+//    		indexingServiceUrl = "161.156.70.122";
+//    		indexingServicePort = 9101;
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -414,7 +414,6 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   Eureka   ***********************************/
     
-    
     @GET
     @Path("eureka")
     @Produces({ MediaType.APPLICATION_JSON })
@@ -424,10 +423,7 @@ public class Delegate implements ServletContextListener {
         return Response.status(Response.Status.OK).entity(endpointList).build();
     }
     
-    /***********************************   Eureka   ***********************************/
-    
     // Initializes Eureka client and registers the service with the Eureka server
-    
     private boolean initEureka() {
         try {
         	logger.info("trying to init eureka client");
@@ -449,8 +445,6 @@ public class Delegate implements ServletContextListener {
         }
         return true;
     }
-    
-    
     
     // Returns a list of Delegate services registered in Eureka server
     private List<ServiceEndpoint> getEndpointsFromEureka() {
