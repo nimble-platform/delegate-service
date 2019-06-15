@@ -7,11 +7,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -24,6 +25,8 @@ import com.google.gson.JsonParser;
  */
 
 public class IndexingServiceResult {
+	private static Logger logger = LogManager.getLogger(IndexingServiceResult.class);
+	
 	// response fields
 	private int totalElements;
 	private int totalPages;
@@ -34,7 +37,6 @@ public class IndexingServiceResult {
 	// response fields end
 	
 	private JsonParser jsonParser;
-	private Gson gson;
 	private ObjectMapper mapper;
 	
 	private ArrayList<ServiceEndpoint> endpointsArray;
@@ -49,14 +51,14 @@ public class IndexingServiceResult {
     	facets = null;
     	
     	jsonParser = new JsonParser();
-    	gson = new GsonBuilder().serializeNulls().create(); // we want to keep null fields in the response
     	mapper = new ObjectMapper();
     	
     	endpointsArray = new ArrayList<ServiceEndpoint>();
     	resultsPerEndpoint = new LinkedHashMap<ServiceEndpoint, LinkedList<JsonObject>>();
 	}
 	
-	public void addEndpointResponse(ServiceEndpoint endpoint, String responseJson) {
+	public void addEndpointResponse(ServiceEndpoint endpoint, String responseJson, boolean localInstance) {
+		logger.info("adding response from instance " + endpoint.getAppName() + ", localInstance = " + localInstance);
 		if (responseJson == null || responseJson.isEmpty()) {
 			return;
 		}
@@ -64,20 +66,26 @@ public class IndexingServiceResult {
 		// summarize totalElements
 		this.totalElements += jsonObject.get("totalElements").getAsInt();
 		// prepare result field for merge later while calculating final result
-		this.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray());
+		this.addEndpointResults(endpoint, jsonObject.get("result").getAsJsonArray(), localInstance);
 		// merge facets
 		this.addFacets(jsonObject.get("facets"));
 	}
 	
-	private void addEndpointResults(ServiceEndpoint endpoint, JsonArray resultArray) {
+	private void addEndpointResults(ServiceEndpoint endpoint, JsonArray resultArray, boolean localInstance) {
 		LinkedList<JsonObject> resultArrayInList = new LinkedList<JsonObject>();
 		for (JsonElement element : resultArray) {
 			JsonObject elementAsObj = element.getAsJsonObject();
 			elementAsObj.addProperty("sourceIndexingServiceUrl", endpoint.getIndexingServiceUrl());
 			elementAsObj.addProperty("nimbleInstanceName", endpoint.getAppName());
+			elementAsObj.addProperty("isFromLocalInstance", localInstance);
 			resultArrayInList.add(elementAsObj);
 		}
-		this.endpointsArray.add(endpoint);
+		if (localInstance) {
+			this.endpointsArray.add(0, endpoint);
+		}
+		else {
+			this.endpointsArray.add(endpoint);
+		}
 		this.resultsPerEndpoint.put(endpoint, resultArrayInList);
 	}
 	
@@ -109,7 +117,6 @@ public class IndexingServiceResult {
 				this.facets.add(facetKey, facetToAddElement);
 				continue;
 			}
-			
 			// if we reached here, facet fieldName exists, need to merge results
 			JsonArray resultEntry = internalObj.getAsJsonObject().get("entry").getAsJsonArray(); // the facet entry array in the result list
 			// iterate over the entry array in the facet to add
@@ -118,7 +125,7 @@ public class IndexingServiceResult {
 				String internalLabel = entryObj.get("label").getAsString();
 				JsonElement facetLabelInResult = getFacetEntryLabelElement(resultEntry, internalLabel);
 				if (facetLabelInResult == null) { // means label doesn't exist in the entry array
-					resultEntry.add(entry); // adding entry to result array 
+					resultEntry.add(entry); // adding entry to result array
 				}
 				else { // other label exists, need to summarize counters
 					int newCount = facetLabelInResult.getAsJsonObject().get("count").getAsInt() + 
@@ -127,13 +134,12 @@ public class IndexingServiceResult {
 				}
 			}
 		}
-		
 	}
 	
 	private boolean facetFieldNameExist(String fieldName) {
 		for (String key : this.facets.keySet()) {
 			String internalFieldName = this.facets.get(key).getAsJsonObject().get("fieldName").getAsString();
-			if (internalFieldName != null && internalFieldName == fieldName) {
+			if (internalFieldName != null && internalFieldName.equals(fieldName)) {
 				return true;
 			}
 		}
@@ -144,13 +150,12 @@ public class IndexingServiceResult {
 		for (JsonElement entryElement : facetEntryArray) {
 			JsonObject entryObj = entryElement.getAsJsonObject();
 			String internalLabel = entryObj.get("label").getAsString();
-			if (internalLabel != null && internalLabel == label) {
+			if (internalLabel != null && internalLabel.equals(label)) {
 				return entryObj;
 			}
 		}
 		return null;
 	}
-	
 	
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> getFinalResult() throws JsonParseException, JsonMappingException, IOException {
@@ -178,13 +183,11 @@ public class IndexingServiceResult {
 		aggregatedResults.put("pageSize", this.pageSize);
 		aggregatedResults.put("currentPage", this.currentPage);
 		
-		String resultStr = gson.toJson(this.result);
 		List<Map<String, Object>> resultList;
-		resultList = mapper.readValue(resultStr, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+		resultList = mapper.readValue(this.result.toString(), mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 		aggregatedResults.put("result", resultList);
 		
-		String facetsStr = gson.toJson(this.facets);
-		Map<String, Object> facetsMap = mapper.readValue(facetsStr, Map.class);
+		Map<String, Object> facetsMap = mapper.readValue(this.facets.toString(), Map.class);
 		aggregatedResults.put("facets", facetsMap);
 		
 		return aggregatedResults;
