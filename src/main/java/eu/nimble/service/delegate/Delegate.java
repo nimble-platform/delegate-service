@@ -216,7 +216,6 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
     	return Response.status(Response.Status.OK)
@@ -293,7 +292,6 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
     	return Response.status(Response.Status.OK)
