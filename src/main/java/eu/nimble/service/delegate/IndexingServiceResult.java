@@ -97,6 +97,9 @@ public class IndexingServiceResult {
 		if (facetsToAddElement == null) {
 			return;
 		}
+		if (!facetsToAddElement.isJsonObject()) {
+			return;
+		}
 		JsonObject facetsToAdd = facetsToAddElement.getAsJsonObject();
 		if (facetsToAdd == null) {
 			return;

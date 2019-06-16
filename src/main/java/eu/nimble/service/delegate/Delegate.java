@@ -85,6 +85,7 @@ public class Delegate implements ServletContextListener {
 //    		frontendServiceUrl = System.getenv("FRONTEND_URL");
 //    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
 //    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		//TODO remove
     		indexingServiceUrl = "161.156.70.122";
     		indexingServicePort = 9101;
     		

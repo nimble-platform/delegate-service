@@ -7,6 +7,12 @@ import javax.ws.rs.container.ContainerResponseContext;
 import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * CORS Filter - a class that handles adding CORS headers to all Http responses.
+ *
+ * Created by Nir Rozenbaum (nirro@il.ibm.com) 06/16/2019.
+ */
+
 @Provider
 public class CorsFilter implements ContainerResponseFilter {
 	@Override
