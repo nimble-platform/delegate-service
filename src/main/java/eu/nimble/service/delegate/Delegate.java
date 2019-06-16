@@ -115,9 +115,9 @@ public class Delegate implements ServletContextListener {
     @GET
     @Path("/")
     public Response hello() {
-        return addCORSHeaders(Response.status(Status.OK)
+        return Response.status(Status.OK)
         			   .type(MediaType.TEXT_PLAIN)
-        			   .entity("Hello from Delegate Service\n"))
+        			   .entity("Hello from Delegate Service\n")
         			   .build();
     }
     
@@ -159,9 +159,9 @@ public class Delegate implements ServletContextListener {
 			}
     	}
     	
-    	return addCORSHeaders(Response.status(Response.Status.OK)
+    	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
-    				   .entity(aggregatedResults))
+    				   .entity(aggregatedResults)
     				   .build();
     }
     
@@ -186,10 +186,10 @@ public class Delegate implements ServletContextListener {
         Response response = httpClient.target(uri.toString()).request().get();
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
-            return addCORSHeaders(Response.status(Status.OK)
+            return Response.status(Status.OK)
             			   .entity(data)
             			   .type(MediaType.APPLICATION_JSON)
-            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort))
+            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
             			   .build();
         }
         else {
@@ -222,9 +222,9 @@ public class Delegate implements ServletContextListener {
     	}
     	
     	
-    	return addCORSHeaders(Response.status(Response.Status.OK)
+    	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
-    								   .entity(indexingServiceResult.getFinalResult()))
+    								   .entity(indexingServiceResult.getFinalResult())
     								   .build();
     }
     
@@ -303,9 +303,9 @@ public class Delegate implements ServletContextListener {
     		String results = resultList.get(endpoint);
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
-    	return addCORSHeaders(Response.status(Response.Status.OK)
+    	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
-    								   .entity(indexingServiceResult.getFinalResult()))
+    								   .entity(indexingServiceResult.getFinalResult())
     								   .build();
     	
     }
@@ -341,10 +341,10 @@ public class Delegate implements ServletContextListener {
         Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
-            return addCORSHeaders(Response.status(Status.OK)
+            return Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
-            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort))
+            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
             				.build();
         }
         else {
@@ -418,13 +418,6 @@ public class Delegate implements ServletContextListener {
         return resList;
     }
     
-    private ResponseBuilder addCORSHeaders(ResponseBuilder responseBuilder) {
-    	return responseBuilder.header("Access-Control-Allow-Origin", "*")
-        			   		  .header("Access-Control-Allow-Credentials", "true")
-        			   		  .header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization")
-        			   		  .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
-    }
-    
     /***********************************   Http Requests - END   ***********************************/
     
     
@@ -436,7 +429,7 @@ public class Delegate implements ServletContextListener {
     // Return the Delegate services registered in Eureka server (Used for debug)
     public Response eureka() {
         List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
-        return addCORSHeaders(Response.status(Response.Status.OK).entity(endpointList)).build();
+        return Response.status(Response.Status.OK).entity(endpointList).build();
     }
     
     // Initializes Eureka client and registers the service with the Eureka server
