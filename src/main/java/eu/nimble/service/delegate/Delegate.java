@@ -29,6 +29,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response;
@@ -37,6 +38,7 @@ import javax.servlet.ServletContextEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,7 @@ public class Delegate implements ServletContextListener {
     
     private static Client httpClient;
     
+    private static String frontendServiceUrl;
     private static String indexingServiceUrl;
     private static int indexingServicePort;
     
@@ -80,10 +83,9 @@ public class Delegate implements ServletContextListener {
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
+    		frontendServiceUrl = System.getenv("FRONTEND_URL");
     		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
     		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-//    		indexingServiceUrl = "161.156.70.122";
-//    		indexingServicePort = 9101;
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -113,9 +115,9 @@ public class Delegate implements ServletContextListener {
     @GET
     @Path("/")
     public Response hello() {
-        return Response.status(Status.OK)
+        return addCORSHeaders(Response.status(Status.OK)
         			   .type(MediaType.TEXT_PLAIN)
-        			   .entity("Hello from Delegate Service\n")
+        			   .entity("Hello from Delegate Service\n"))
         			   .build();
     }
     
@@ -157,9 +159,9 @@ public class Delegate implements ServletContextListener {
 			}
     	}
     	
-    	return Response.status(Response.Status.OK)
+    	return addCORSHeaders(Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
-    				   .entity(aggregatedResults)
+    				   .entity(aggregatedResults))
     				   .build();
     }
     
@@ -184,10 +186,10 @@ public class Delegate implements ServletContextListener {
         Response response = httpClient.target(uri.toString()).request().get();
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
-            return Response.status(Status.OK)
+            return addCORSHeaders(Response.status(Status.OK)
             			   .entity(data)
             			   .type(MediaType.APPLICATION_JSON)
-            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
+            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort))
             			   .build();
         }
         else {
@@ -218,9 +220,11 @@ public class Delegate implements ServletContextListener {
     		String results = resultList.get(endpoint);
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
-    	return Response.status(Response.Status.OK)
+    	
+    	
+    	return addCORSHeaders(Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
-    								   .entity(indexingServiceResult.getFinalResult())
+    								   .entity(indexingServiceResult.getFinalResult()))
     								   .build();
     }
     
@@ -233,22 +237,27 @@ public class Delegate implements ServletContextListener {
     	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, "/item/search/local", body);
     	
     	int sumTotalElements = 0;
+    	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
     	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
     		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
-    		sumTotalElements += Integer.parseInt(json.get("totalElements").toString());
+    		int totalElementForEndpoint = Integer.parseInt(json.get("totalElements").toString());
+    		totalElementPerEndpoint.put(entry.getKey(), totalElementForEndpoint);
+    		sumTotalElements += totalElementForEndpoint;
     	}
     	if (sumTotalElements <= requestedPageSize) {
     		body.put("rows", requestedPageSize); 
     		return sendPostRequestToAllServices(endpointList, "/item/search/local", body);
     	}
     	// else, we need to decide how many results we want from each delegate
-    	int numOfAggregatedResults = 0;
-    	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
-    		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
-    		int delegateTotalElements = Integer.parseInt(json.get("totalElements").toString());
+   
+    	int totalElementsAggregated = 0;
+    	HashMap<ServiceEndpoint, String> aggregatedResults = new LinkedHashMap<ServiceEndpoint, String>();
+    	for (ServiceEndpoint endpoint : endpointList) {
+    		int localTotalElements = Math.round(totalElementPerEndpoint.get(endpoint) / ((float)sumTotalElements))*requestedPageSize;
+    		
     	}
     	
-    	return null;
+    	return aggregatedResults;
     }
     
     // a REST call that should be used between delegates. 
@@ -294,9 +303,9 @@ public class Delegate implements ServletContextListener {
     		String results = resultList.get(endpoint);
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
-    	return Response.status(Response.Status.OK)
+    	return addCORSHeaders(Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
-    								   .entity(indexingServiceResult.getFinalResult())
+    								   .entity(indexingServiceResult.getFinalResult()))
     								   .build();
     	
     }
@@ -332,10 +341,10 @@ public class Delegate implements ServletContextListener {
         Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
-            return Response.status(Status.OK)
+            return addCORSHeaders(Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
-            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
+            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort))
             				.build();
         }
         else {
@@ -409,6 +418,13 @@ public class Delegate implements ServletContextListener {
         return resList;
     }
     
+    private ResponseBuilder addCORSHeaders(ResponseBuilder responseBuilder) {
+    	return responseBuilder.header("Access-Control-Allow-Origin", "*")
+        			   		  .header("Access-Control-Allow-Credentials", "true")
+        			   		  .header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization")
+        			   		  .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+    }
+    
     /***********************************   Http Requests - END   ***********************************/
     
     
@@ -420,7 +436,7 @@ public class Delegate implements ServletContextListener {
     // Return the Delegate services registered in Eureka server (Used for debug)
     public Response eureka() {
         List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
-        return Response.status(Response.Status.OK).entity(endpointList).build();
+        return addCORSHeaders(Response.status(Response.Status.OK).entity(endpointList)).build();
     }
     
     // Initializes Eureka client and registers the service with the Eureka server
