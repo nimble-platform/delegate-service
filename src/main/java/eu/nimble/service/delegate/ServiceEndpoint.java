@@ -10,7 +10,7 @@ public class ServiceEndpoint {
     private  String hostName;
     private int port;
     private String appName;
-    private String indexingServiceUrl;
+    private String frontendServiceUrl;
 
     public ServiceEndpoint(String id, String hostName, int port, String appName) {
         this.id = id;
@@ -35,12 +35,12 @@ public class ServiceEndpoint {
     	return this.appName;
     }
     
-    public String getIndexingServiceUrl() {
-    	return this.indexingServiceUrl;
+    public String getFrontendServiceUrl() {
+    	return this.frontendServiceUrl;
     }
     
-    public void setIndexingServiceUrl(String indexingServiceUrl) {
-    	this.indexingServiceUrl = indexingServiceUrl;
+    public void setFrontendServiceUrl(String frontendServiceUrl) {
+    	this.frontendServiceUrl = frontendServiceUrl;
     }
     
     @Override
@@ -49,7 +49,7 @@ public class ServiceEndpoint {
     			+ "id: " + this.id + ",\n\t"
 				+ "hostname: " + this.hostName + ",\n\t"
 				+ "port: " + this.port + ",\n\t"
-				+ "indexingServiceUrl: " + this.indexingServiceUrl + ",\n\t"
+				+ "frontendServiceUrl: " + this.frontendServiceUrl + ",\n\t"
 				+ "appName: " + this.appName + "\n";  
     }
 }

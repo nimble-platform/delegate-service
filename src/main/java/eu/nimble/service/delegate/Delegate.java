@@ -82,19 +82,20 @@ public class Delegate implements ServletContextListener {
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-//    		frontendServiceUrl = System.getenv("FRONTEND_URL");
-//    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
-//    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		frontendServiceUrl = System.getenv("FRONTEND_URL");
+    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
     		//TODO remove
-    		indexingServiceUrl = "161.156.70.122";
-    		indexingServicePort = 9101;
+//    		indexingServiceUrl = "161.156.70.122";
+//    		indexingServicePort = 9101;
     		
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
     	}
     	
-        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with indexing service param = " + indexingServiceUrl + ":" + indexingServicePort + "...");
+        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with frontend service param = " + frontendServiceUrl 
+        													+ ", indexing service param = " + indexingServiceUrl + ":" + indexingServicePort + "...");
         
         httpClient = ClientBuilder.newClient();
 
@@ -192,7 +193,7 @@ public class Delegate implements ServletContextListener {
             return Response.status(Status.OK)
             			   .entity(data)
             			   .type(MediaType.APPLICATION_JSON)
-            			   .header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
+            			   .header("frontendServiceUrl", frontendServiceUrl)
             			   .build();
         }
         else {
@@ -353,7 +354,7 @@ public class Delegate implements ServletContextListener {
             return Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
-            				.header("indexingSerivceUrl", "http://"+indexingServiceUrl+":"+indexingServicePort)
+            				.header("frontendServiceUrl", frontendServiceUrl)
             				.build();
         }
         else {
@@ -413,7 +414,7 @@ public class Delegate implements ServletContextListener {
             try {
             	Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
                 String data = res.readEntity(String.class);
-                endpoint.setIndexingServiceUrl(res.getHeaderString("indexingSerivceUrl"));
+                endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
                 resList.put(endpoint, data);
             } catch(Exception e) {
                 logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +

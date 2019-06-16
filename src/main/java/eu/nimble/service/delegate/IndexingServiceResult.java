@@ -75,7 +75,7 @@ public class IndexingServiceResult {
 		LinkedList<JsonObject> resultArrayInList = new LinkedList<JsonObject>();
 		for (JsonElement element : resultArray) {
 			JsonObject elementAsObj = element.getAsJsonObject();
-			elementAsObj.addProperty("sourceIndexingServiceUrl", endpoint.getIndexingServiceUrl());
+			elementAsObj.addProperty("sourceFrontendServiceUrl", endpoint.getFrontendServiceUrl());
 			elementAsObj.addProperty("nimbleInstanceName", endpoint.getAppName());
 			elementAsObj.addProperty("isFromLocalInstance", localInstance);
 			resultArrayInList.add(elementAsObj);
