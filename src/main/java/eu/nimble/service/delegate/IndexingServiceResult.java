@@ -186,9 +186,13 @@ public class IndexingServiceResult {
 		List<Map<String, Object>> resultList;
 		resultList = mapper.readValue(this.result.toString(), mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 		aggregatedResults.put("result", resultList);
-		
-		Map<String, Object> facetsMap = mapper.readValue(this.facets.toString(), Map.class);
-		aggregatedResults.put("facets", facetsMap);
+		if (facets != null) {
+			Map<String, Object> facetsMap = mapper.readValue(this.facets.toString(), Map.class);
+			aggregatedResults.put("facets", facetsMap); 
+		}
+		else {
+			aggregatedResults.put("facets", null);
+		}
 		
 		return aggregatedResults;
 	}

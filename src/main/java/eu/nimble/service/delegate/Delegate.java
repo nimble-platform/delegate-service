@@ -29,7 +29,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response;
@@ -83,9 +82,12 @@ public class Delegate implements ServletContextListener {
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-    		frontendServiceUrl = System.getenv("FRONTEND_URL");
-    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
-    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+//    		frontendServiceUrl = System.getenv("FRONTEND_URL");
+//    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+//    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		indexingServiceUrl = "161.156.70.122";
+    		indexingServicePort = 9101;
+    		
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -294,8 +296,14 @@ public class Delegate implements ServletContextListener {
     	logger.info("called federated post party search");
     	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
     	//initialize result from the request body
-    	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
-    																			Integer.parseInt(body.get("start").toString()));
+    	IndexingServiceResult indexingServiceResult;
+    	if (body.get("start") != null) {
+    	indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
+														  Integer.parseInt(body.get("start").toString()));
+    	}
+    	else {
+    		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 0);
+    	}
     	
     	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices(endpointList, "/party/search/local", body);
     	
