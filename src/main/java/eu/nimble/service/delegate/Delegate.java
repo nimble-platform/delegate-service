@@ -434,7 +434,7 @@ public class Delegate implements ServletContextListener {
 		}
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
-    		logger.info("********************** 1 ***************************");
+    		logger.info("********************** 1" + body.toString() + " ***************************");
     		JsonObject bodyJson = jsonParser.parse(body.toString()).getAsJsonObject();
     		logger.info("********************** 2 " + bodyJson + "***************************");
     		JsonArray fqList = bodyJson.get("fq").getAsJsonArray();
