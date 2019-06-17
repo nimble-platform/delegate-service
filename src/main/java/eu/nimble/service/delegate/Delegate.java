@@ -6,6 +6,10 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.netflix.appinfo.ApplicationInfoManager;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.appinfo.MyDataCenterInstanceConfig;
@@ -37,11 +41,13 @@ import javax.servlet.ServletContextEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.io.IOException;
@@ -75,8 +81,7 @@ public class Delegate implements ServletContextListener {
     private static String postPartySearchPath = "/party/search";
     
     private static ObjectMapper mapper = new ObjectMapper();
-    
-    
+    private static JsonParser jsonParser = new JsonParser();
     
     /***********************************   Servlet Context   ***********************************/
     
@@ -86,9 +91,6 @@ public class Delegate implements ServletContextListener {
     		frontendServiceUrl = System.getenv("FRONTEND_URL");
     		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
     		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-    		//TODO remove
-//    		indexingServiceUrl = "161.156.70.122";
-//    		indexingServicePort = 9101;
     		
     	}
     	catch (Exception ex) {
@@ -104,7 +106,6 @@ public class Delegate implements ServletContextListener {
             logger.error("Failed to initialize Eureka client");
             return;
         }
-
         logger.info("Delegate service has been initialized");
     }
 
@@ -139,30 +140,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	
     	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/item/fields/local", queryParams);
-    	
-    	List<Object> aggregatedResults = new LinkedList<Object>();
-    	ObjectMapper mapper = new ObjectMapper();
-    	
-    	for (String results : resultList.values()) {
-    		if (results == null || results.isEmpty()) {
-				continue;
-			}
-    		List<Map<String, Object>> json;
-			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-				for (int i=0; i<json.size(); ++i) {
-					Map<String, Object> jsonObject = json.get(i);
-					String key = jsonObject.get("fieldName").toString();
-					if (!aggregatedResults.contains(key)) {
-						aggregatedResults.add(jsonObject);
-					}
-				}
-			} catch (IOException e) {
-				logger.warn("failed to read response json " + e.getMessage());
-			}
-    	}
+    	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -176,16 +155,9 @@ public class Delegate implements ServletContextListener {
     @GET
     @Path("/item/fields/local")
     public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
-    	// Prepare the destination URL for the local request
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http");
-        if (fieldName != null && !fieldName.isEmpty()) {
-        	uriBuilder.queryParam("fieldName", fieldName);
-        }
-        
-        
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getItemFieldsPath).build();
-        
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        queryParams.put("fieldName", fieldName);
+        URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, queryParams);
         logger.info("got a request to endpoint /item/fields/local, forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
@@ -217,30 +189,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	
     	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/party/fields/local", queryParams);
-    	
-    	List<Object> aggregatedResults = new LinkedList<Object>();
-    	ObjectMapper mapper = new ObjectMapper();
-    	
-    	for (String results : resultList.values()) {
-    		if (results == null || results.isEmpty()) {
-				continue;
-			}
-    		List<Map<String, Object>> json;
-			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-				for (int i=0; i<json.size(); ++i) {
-					Map<String, Object> jsonObject = json.get(i);
-					String key = jsonObject.get("fieldName").toString();
-					if (!aggregatedResults.contains(key)) {
-						aggregatedResults.add(jsonObject);
-					}
-				}
-			} catch (IOException e) {
-				logger.warn("failed to read response json " + e.getMessage());
-			}
-    	}
+    	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -254,16 +204,9 @@ public class Delegate implements ServletContextListener {
     @GET
     @Path("/party/fields/local")
     public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
-    	// Prepare the destination URL for the local request
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http");
-        if (fieldName != null && !fieldName.isEmpty()) {
-        	uriBuilder.queryParam("fieldName", fieldName);
-        }
-        
-        
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getPartyFieldsPath).build();
-        
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        queryParams.put("fieldName", fieldName);
+        URI uri = buildUri(indexingServiceUrl, indexingServicePort, getPartyFieldsPath, queryParams);
         logger.info("got a request to endpoint /party/fields/local, forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
@@ -303,7 +246,6 @@ public class Delegate implements ServletContextListener {
     		String results = resultList.get(endpoint);
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
     	}
-    	
     	
     	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
@@ -350,10 +292,15 @@ public class Delegate implements ServletContextListener {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/item/search/local")
     public Response postItemSearch(Map<String, Object> body) {
-    	// Prepare the destination URL for the local request
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http");
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postItemSearchPath).build();
+    	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
+    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
+    	if (doesFqListContainFieldNameNotFromLocal(body, localFieldNames)) {
+    		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
+    	}
+    	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
+    	removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	
+        URI uri = buildUri(indexingServiceUrl, indexingServicePort, postItemSearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
@@ -402,15 +349,20 @@ public class Delegate implements ServletContextListener {
     // a REST call that should be used between delegates. 
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
-    @POST
+    @SuppressWarnings("unchecked")
+	@POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search/local")
     public Response postPartySearch(Map<String, Object> body) {
-    	// Prepare the destination URL for the local request
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http");
-        
-        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(postPartySearchPath).build();
+    	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
+    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
+    	if (doesFqListContainFieldNameNotFromLocal(body, localFieldNames)) {
+    		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
+    	}
+    	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
+    	removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	
+    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, postPartySearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
@@ -421,7 +373,119 @@ public class Delegate implements ServletContextListener {
     /***********************************   indexing-service/party/search - END   ***********************************/
     
     
+    /***********************************   indexing-service extra logic   ***********************************/
+    
+    // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
+    private List<Object> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
+    	List<Object> aggregatedResults = new LinkedList<Object>();
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	for (String results : resultList.values()) {
+    		if (results == null || results.isEmpty()) {
+				continue;
+			}
+    		List<Map<String, Object>> json;
+			try {
+				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				for (int i=0; i<json.size(); ++i) {
+					Map<String, Object> jsonObject = json.get(i);
+					String key = jsonObject.get("fieldName").toString();
+					if (!aggregatedResults.contains(key)) {
+						aggregatedResults.add(jsonObject);
+					}
+				}
+			} catch (IOException e) {
+				logger.warn("failed to read response json " + e.getMessage());
+			}
+    	}
+    	return aggregatedResults;
+    }
+    
+    private Set<String> getLocalFieldNamesFromIndexingSerivce() {
+    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, null);
+        logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
+        
+        Response response = httpClient.target(uri.toString()).request().get();
+        if (response.getStatus() >= 400) { // we had an issue, we can't modify the body without any response
+       	 logger.warn("get error when calling GET '/item/fields' in indexing service");
+       	 return new HashSet<String>();
+        }
+        
+        String data = response.readEntity(String.class);
+        Set<String> localFieldNames = new HashSet<String>();
+		try {
+			List<Map<String, Object>> json = mapper.readValue(data, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+			for (int i=0; i<json.size(); ++i) {
+				Map<String, Object> jsonObject = json.get(i);
+				String fieldName = jsonObject.get("fieldName").toString();
+				localFieldNames.add(fieldName);
+			}
+		}
+		catch (Exception ex) {
+			logger.warn("get error while processing GET '/item/fields' response from indexing service...");
+		}
+		return localFieldNames;
+    }
+    
+    @SuppressWarnings("unchecked")
+	private boolean doesFqListContainFieldNameNotFromLocal(Map<String, Object> body, Set<String> localFieldNames) {
+    	if (body.get("fq") == null) {
+			return false; 
+		}
+    	try {
+    		List<String> fqList = mapper.readValue(body.get("fq").toString(), List.class);
+    		for (String fq : fqList) {
+    			String fqFieldName = fq.split(":")[0];
+    			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
+    			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
+    				return true;
+    			}
+    		}
+    	}
+    	catch (Exception ex) {
+    		logger.warn("error while trying to cast fq field to json");
+    	}
+    	return false;
+    }
+    
+    // remove from body.facet.fields all field names that doesn't exist in the local indexing service instance
+    private void removeNonExistingFieldNamesFromBody(Map<String, Object> body, Set<String> localFieldNames) {
+    	if (body.get("facet") == null) {
+    		return;
+    	}
+    	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
+    	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
+    	JsonArray jsonElementsToRemove = new JsonArray();
+    	for (JsonElement element : fieldJsonObject) {
+    		String fieldName = element.getAsString();
+    		if (fieldName != null && !localFieldNames.contains(fieldName)) {
+    			jsonElementsToRemove.add(element);
+    		}
+    	}
+    	for (JsonElement element : jsonElementsToRemove) {
+    		fieldJsonObject.remove(element);
+    	}
+    	body.put("facet", facetJsonObject.toString());
+    }
+    
+    /***********************************   indexing-service extra logic - END   ***********************************/
+    
+    
     /***********************************   Http Requests   ***********************************/
+    
+    private URI buildUri(String host, int port, String path, HashMap<String, List<String>> queryParams) {
+    	// Prepare the destination URL for the request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        if (queryParams != null) {
+        	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
+        		if (queryParam.getValue() != null && !queryParam.getValue().isEmpty()) {
+        			uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
+        		}
+        	}
+        }
+        return uriBuilder.host(host).port(port).path(path).build();
+    }
     
     // forward post request
     private Response forwardPostRequest(String from, String to, Map<String, Object> body, MultivaluedMap<String, Object> headers) {
@@ -458,6 +522,7 @@ public class Delegate implements ServletContextListener {
             	}
             }
             URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            
             logger.info("sending the request to " + endpoint.toString() + "...");
             Future<Response> result = httpClient.target(uri.toString()).request().async().get();
             futureList.add(result);
@@ -471,10 +536,7 @@ public class Delegate implements ServletContextListener {
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
-            // Prepare the destination URL
-            UriBuilder uriBuilder = UriBuilder.fromUri("");
-            uriBuilder.scheme("http");
-            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            URI uri = buildUri(endpoint.getHostName(), endpoint.getPort(), urlPath, null);
             logger.info("sending the request to " + endpoint.toString() + "...");
             Future<Response> result = httpClient.target(uri.toString()).request().async().post(Entity.json(body));
             futureList.add(result);
