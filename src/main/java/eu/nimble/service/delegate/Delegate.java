@@ -406,7 +406,7 @@ public class Delegate implements ServletContextListener {
     }
     
     private Set<String> getLocalFieldNamesFromIndexingSerivce() {
-    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsLocalPath, null);
+    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
         Response response = httpClient.target(uri.toString()).request().get();
