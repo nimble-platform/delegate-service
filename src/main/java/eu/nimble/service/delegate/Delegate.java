@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -434,15 +433,12 @@ public class Delegate implements ServletContextListener {
 			return false; 
 		}
     	try {
-    		logger.info("fq value = " + body.get("fq").toString());
     		String fqStr = body.get("fq").toString();
     		fqStr = fqStr.substring(1, fqStr.length()-1).trim();
-    		logger.info("fqStr value = " + fqStr);
     		String[] fqList = fqStr.split(",");
-    		logger.info("********************** 2 " + fqList + "***************************");
     		for (String fq : fqList) {
-    			logger.info("********************** 3 " + fq +"***************************");
-    			String fqFieldName = fq.trim().split(":")[0];
+    			fq = fq.trim();
+    			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
     				return true;
