@@ -352,7 +352,6 @@ public class Delegate implements ServletContextListener {
     // a REST call that should be used between delegates. 
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
-    @SuppressWarnings("unchecked")
 	@POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search/local")
@@ -430,14 +429,14 @@ public class Delegate implements ServletContextListener {
 		return localFieldNames;
     }
     
-    @SuppressWarnings("unchecked")
 	private boolean doesFqListContainFieldNameNotFromLocal(Map<String, Object> body, Set<String> localFieldNames) {
     	if (body.get("fq") == null) {
 			return false; 
 		}
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
-    		JsonArray fqList = jsonParser.parse(body.get("fq").toString()).getAsJsonArray();
+    		JsonObject bodyJson = jsonParser.parse(body.toString()).getAsJsonObject();
+    		JsonArray fqList = bodyJson.get("fq").getAsJsonArray();
     		for (JsonElement fqElement : fqList) {
     			String fq = fqElement.getAsString();
     			String fqFieldName = fq.split(":")[0];
