@@ -87,3 +87,32 @@ Note: it is better to stop the services before removing them, to let them un-reg
 ```shell
 $ docker rm delegate-1 delegate-2 delegate-3
 ```
+
+### deploy the delegate service on Staging
+follow these steps:
+1. git clone delegate service project
+2. go to the file `src/main/resources/eureka-client.properties` and change `eureka.name=Staging`
+3. build the project using mvn and create a docker image locally with the following command: `mvn compile ; mvn package ; docker build -t nimbleplatform/delegate-service:staging .`
+4. need to update docker-compose.yml and add these lines (under services):
+```
+  ###############################
+  ###### Delegate Service #######
+  ###############################
+
+  delegate-service:
+    image: nimbleplatform/delegate-service:staging
+    env_file:
+      - env_vars
+    environment:
+      - FRONTEND_URL=http://nimble-staging.salzburgresearch.at/frontend/
+      - INDEXING_SERVICE_URL=nimble-staging.salzburgresearch.at/indexing-service
+      - INDEXING_SERVICE_PORT=-1
+    ports:
+      - "9265:8080"
+    networks:
+      - infra
+```
+(you need to update the ips and port for the staging instance, port = -1 if you're using no port in case like nginx)
+5. then in dev I ran the docker using `./run-dev.sh restart-single delegate-service`, not sure how you do it in staging
+
+
