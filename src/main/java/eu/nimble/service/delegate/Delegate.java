@@ -275,8 +275,6 @@ public class Delegate implements ServletContextListener {
     		endpointList.remove(endpoint);
     	}
     	
-    	
-    	
     	int sumTotalElements = 0;
     	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
     	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
@@ -285,7 +283,7 @@ public class Delegate implements ServletContextListener {
     		totalElementPerEndpoint.put(entry.getKey(), totalElementForEndpoint);
     		sumTotalElements += totalElementForEndpoint;
     	}
-    	if (sumTotalElements <= requestedPageSize) {
+    	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0) {
     		body.put("rows", requestedPageSize); 
     		return sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
     	}
@@ -294,7 +292,7 @@ public class Delegate implements ServletContextListener {
     	int totalElementsAggregated = 0;
     	HashMap<ServiceEndpoint, String> aggregatedResults = new LinkedHashMap<ServiceEndpoint, String>();
     	for (ServiceEndpoint endpoint : endpointList) {
-    		int localTotalElements = Math.round(totalElementPerEndpoint.get(endpoint) / ((float)sumTotalElements))*requestedPageSize;
+    		int endpointRows = Math.round(totalElementPerEndpoint.get(endpoint) / ((float)sumTotalElements))*requestedPageSize;
     		
     	}
     	
