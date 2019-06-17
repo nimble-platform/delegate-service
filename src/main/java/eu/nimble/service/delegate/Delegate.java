@@ -272,6 +272,7 @@ public class Delegate implements ServletContextListener {
     	}
     	for (ServiceEndpoint endpoint : endpointsToRemove) {
     		dummyResultList.remove(endpoint);
+    		endpointList.remove(endpoint);
     	}
     	
     	
@@ -309,7 +310,7 @@ public class Delegate implements ServletContextListener {
     public Response postItemSearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
     	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
-    	if (doesFqListContainFieldNameNotFromLocal(body, localFieldNames)) {
+    	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
@@ -370,7 +371,7 @@ public class Delegate implements ServletContextListener {
     public Response postPartySearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
     	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
-    	if (doesFqListContainFieldNameNotFromLocal(body, localFieldNames)) {
+    	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
@@ -440,7 +441,7 @@ public class Delegate implements ServletContextListener {
 		return localFieldNames;
     }
     
-	private boolean doesFqListContainFieldNameNotFromLocal(Map<String, Object> body, Set<String> localFieldNames) {
+	private boolean fqListContainNonLocalFieldName(Map<String, Object> body, Set<String> localFieldNames) {
     	if (body.get("fq") == null) {
 			return false; 
 		}
