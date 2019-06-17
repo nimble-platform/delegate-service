@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -435,13 +436,10 @@ public class Delegate implements ServletContextListener {
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
     		logger.info("********************** 1" + body.toString() + " ***************************");
-    		JsonObject bodyJson = jsonParser.parse(body.toString()).getAsJsonObject();
-    		logger.info("********************** 2 " + bodyJson + "***************************");
-    		JsonArray fqList = bodyJson.get("fq").getAsJsonArray();
-    		logger.info("********************** 3" + fqList + "***************************");
-    		for (JsonElement fqElement : fqList) {
-    			String fq = fqElement.getAsString();
-    			logger.info("********************** 4 " + fq +"***************************");
+    		List<String> fqList = mapper.readValue(body.get("fq").toString(), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+    		logger.info("********************** 2 " + fqList + "***************************");
+    		for (String fq : fqList) {
+    			logger.info("********************** 3 " + fq +"***************************");
     			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
