@@ -380,7 +380,6 @@ public class Delegate implements ServletContextListener {
     // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
     private List<Object> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
     	List<Object> aggregatedResults = new LinkedList<Object>();
-    	ObjectMapper mapper = new ObjectMapper();
     	
     	for (String results : resultList.values()) {
     		if (results == null || results.isEmpty()) {
@@ -435,10 +434,14 @@ public class Delegate implements ServletContextListener {
 		}
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
+    		logger.info("********************** 1 ***************************");
     		JsonObject bodyJson = jsonParser.parse(body.toString()).getAsJsonObject();
+    		logger.info("********************** 2 " + bodyJson + "***************************");
     		JsonArray fqList = bodyJson.get("fq").getAsJsonArray();
+    		logger.info("********************** 3" + fqList + "***************************");
     		for (JsonElement fqElement : fqList) {
     			String fq = fqElement.getAsString();
+    			logger.info("********************** 4 " + fq +"***************************");
     			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
