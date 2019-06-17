@@ -467,6 +467,7 @@ public class Delegate implements ServletContextListener {
     		}
     	}
     	for (JsonElement element : jsonElementsToRemove) {
+    		logger.info("fieldName "+ element.toString() + " doesn't exist in local instance, removing it...");
     		fieldJsonObject.remove(element);
     	}
     	body.put("facet", facetJsonObject.toString());
