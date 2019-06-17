@@ -70,6 +70,7 @@ public class Delegate implements ServletContextListener {
     private static int indexingServicePort;
     
     private static String getItemFieldsPath = "/item/fields";
+    private static String getPartyFieldsPath = "/party/fields";
     private static String postItemSearchPath = "/item/search";
     private static String postPartySearchPath = "/party/search";
     
@@ -204,6 +205,84 @@ public class Delegate implements ServletContextListener {
     /***********************************   indexing-service/item/fields - END   ***********************************/
     
 
+    /***********************************   indexing-service/party/fields   ***********************************/
+    
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/party/fields")
+    public Response federatedGetPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    	logger.info("called federated get party fields");
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	if (fieldName != null && !fieldName.isEmpty()) {
+    		queryParams.put("fieldName", fieldName);
+        }
+    	logger.info("query params: " + queryParams.toString());
+    	
+    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/party/fields/local", queryParams);
+    	
+    	List<Object> aggregatedResults = new LinkedList<Object>();
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	for (String results : resultList.values()) {
+    		if (results == null || results.isEmpty()) {
+				continue;
+			}
+    		List<Map<String, Object>> json;
+			try {
+				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				for (int i=0; i<json.size(); ++i) {
+					Map<String, Object> jsonObject = json.get(i);
+					String key = jsonObject.get("fieldName").toString();
+					if (!aggregatedResults.contains(key)) {
+						aggregatedResults.add(jsonObject);
+					}
+				}
+			} catch (IOException e) {
+				logger.warn("failed to read response json " + e.getMessage());
+			}
+    	}
+    	
+    	return Response.status(Response.Status.OK)
+    				   .type(MediaType.APPLICATION_JSON)
+    				   .entity(aggregatedResults)
+    				   .build();
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
+    @GET
+    @Path("/party/fields/local")
+    public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    	// Prepare the destination URL for the local request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        if (fieldName != null && !fieldName.isEmpty()) {
+        	uriBuilder.queryParam("fieldName", fieldName);
+        }
+        
+        
+        URI uri = uriBuilder.host(indexingServiceUrl).port(indexingServicePort).path(getPartyFieldsPath).build();
+        
+        logger.info("got a request to endpoint /party/fields/local, forwarding to " + uri.toString());
+        
+        Response response = httpClient.target(uri.toString()).request().get();
+        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
+        	String data = response.readEntity(String.class);
+            return Response.status(Status.OK)
+            			   .entity(data)
+            			   .type(MediaType.APPLICATION_JSON)
+            			   .header("frontendServiceUrl", frontendServiceUrl)
+            			   .build();
+        }
+        else {
+        	return response;
+        }
+    }
+    
+    /***********************************   indexing-service/party/fields - END   ***********************************/
+    
+    
     /***********************************   indexing-service/item/search   ***********************************/   
      /* @throws IOException 
      * @throws JsonMappingException 
