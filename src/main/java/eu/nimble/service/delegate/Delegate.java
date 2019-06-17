@@ -274,6 +274,8 @@ public class Delegate implements ServletContextListener {
     		dummyResultList.remove(endpoint);
     	}
     	
+    	
+    	
     	int sumTotalElements = 0;
     	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
     	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
@@ -451,7 +453,7 @@ public class Delegate implements ServletContextListener {
     			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
-    				logger.info("fq field name " + fqFieldName + "doesn't exist in local instance, returns empty result");
+    				logger.info("fq field name " + fqFieldName + " doesn't exist in local instance, returns empty result");
     				return true;
     			}
     		}
@@ -467,6 +469,7 @@ public class Delegate implements ServletContextListener {
     	if (body.get("facet") == null) {
     		return;
     	}
+    	logger.info("body value before the change = " + body.toString());
     	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
     	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
     	JsonArray jsonElementsToRemove = new JsonArray();
@@ -481,6 +484,7 @@ public class Delegate implements ServletContextListener {
     		fieldJsonObject.remove(element);
     	}
     	body.put("facet", facetJsonObject.toString());
+    	logger.info("body value after the change = " + body.toString());
     }
     
     /***********************************   indexing-service extra logic - END   ***********************************/
