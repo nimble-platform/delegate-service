@@ -95,7 +95,6 @@ public class Delegate implements ServletContextListener {
     		frontendServiceUrl = System.getenv("FRONTEND_URL");
     		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
     		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-    		
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
@@ -437,7 +436,9 @@ public class Delegate implements ServletContextListener {
 			return false; 
 		}
     	try {
+    		logger.info("fq value = " + body.get("fq").toString());
     		List<String> fqList = mapper.readValue(body.get("fq").toString(), List.class);
+    		logger.info("************* here ***************");
     		for (String fq : fqList) {
     			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
