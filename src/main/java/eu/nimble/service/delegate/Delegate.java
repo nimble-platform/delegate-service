@@ -263,6 +263,16 @@ public class Delegate implements ServletContextListener {
     	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
     	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
     	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
+    	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
+    	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
+    		String result = dummyResultList.get(endpoint);
+    		if (result == null || result.isEmpty()) {
+    			endpointsToRemove.add(endpoint);
+    		}
+    	}
+    	for (ServiceEndpoint endpoint : endpointsToRemove) {
+    		dummyResultList.remove(endpoint);
+    	}
     	
     	int sumTotalElements = 0;
     	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
@@ -441,6 +451,7 @@ public class Delegate implements ServletContextListener {
     			String fqFieldName = fq.split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
+    				logger.info("fq field name " + fqFieldName + "doesn't exist in local instance, returns empty result");
     				return true;
     			}
     		}
