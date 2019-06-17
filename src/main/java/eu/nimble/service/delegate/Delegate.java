@@ -435,7 +435,10 @@ public class Delegate implements ServletContextListener {
 		}
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
-    		String[] fqList = body.get("fq").toString().split(",");
+    		String fqStr = body.get("fq").toString();
+    		fqStr = fqStr.substring(1, fqStr.length()-1).trim();
+    		logger.info("fqStr value = " + fqStr);
+    		String[] fqList = fqStr.split(",");
     		logger.info("********************** 2 " + fqList + "***************************");
     		for (String fq : fqList) {
     			logger.info("********************** 3 " + fq +"***************************");
