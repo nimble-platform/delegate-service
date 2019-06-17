@@ -40,6 +40,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.ServletContextEvent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -72,7 +73,8 @@ public class Delegate implements ServletContextListener {
     private static Client httpClient;
     
     private static String frontendServiceUrl;
-    private static String indexingServiceUrl;
+    private static String indexingServiceBaseUrl;
+    private static String indexingServicePathPrefix;
     private static int indexingServicePort;
     
     private static String getItemFieldsPath = "/item/fields";
@@ -93,15 +95,22 @@ public class Delegate implements ServletContextListener {
     {
     	try {
     		frontendServiceUrl = System.getenv("FRONTEND_URL");
-    		indexingServiceUrl = System.getenv("INDEXING_SERVICE_URL");
+    		indexingServiceBaseUrl = System.getenv("INDEXING_SERVICE_URL");
     		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
+    		if (indexingServiceUrlParts.length > 1) {
+    			indexingServiceBaseUrl = indexingServiceUrlParts[0];
+    			indexingServicePathPrefix = String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
+    			logger.info("indexing service prefix = " + indexingServicePathPrefix);
+    		}
+    		
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
     	}
     	
         logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with frontend service param = " + frontendServiceUrl 
-        													+ ", indexing service param = " + indexingServiceUrl + ":" + indexingServicePort + "...");
+        													+ ", indexing service param = " + indexingServiceBaseUrl + ":" + indexingServicePort + "...");
         
         httpClient = ClientBuilder.newClient();
 
@@ -160,7 +169,7 @@ public class Delegate implements ServletContextListener {
     public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, queryParams);
+        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getItemFieldsPath, queryParams);
         logger.info("got a request to endpoint " + getItemFieldsLocalPath + ", forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
@@ -209,7 +218,7 @@ public class Delegate implements ServletContextListener {
     public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = buildUri(indexingServiceUrl, indexingServicePort, getPartyFieldsPath, queryParams);
+        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getPartyFieldsPath, queryParams);
         logger.info("got a request to endpoint " + getPartyFieldsLocalPath + ", forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
@@ -319,7 +328,7 @@ public class Delegate implements ServletContextListener {
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
     	removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-        URI uri = buildUri(indexingServiceUrl, indexingServicePort, postItemSearchPath, null);
+        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+postItemSearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
@@ -380,7 +389,7 @@ public class Delegate implements ServletContextListener {
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
     	removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, postPartySearchPath, null);
+    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+postPartySearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
@@ -419,7 +428,7 @@ public class Delegate implements ServletContextListener {
     }
     
     private Set<String> getLocalFieldNamesFromIndexingSerivce() {
-    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, null);
+    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getItemFieldsPath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
         Response response = httpClient.target(uri.toString()).request().get();
