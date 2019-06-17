@@ -103,7 +103,9 @@ public class Delegate implements ServletContextListener {
     			indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
     			logger.info("indexing service prefix = " + indexingServicePathPrefix);
     		}
-    		
+    		else {
+    			indexingServicePathPrefix = "";
+    		}
     	}
     	catch (Exception ex) {
     		logger.warn("env vars are not set as expected");
