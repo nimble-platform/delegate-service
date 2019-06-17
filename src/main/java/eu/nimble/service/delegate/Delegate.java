@@ -435,12 +435,11 @@ public class Delegate implements ServletContextListener {
 		}
     	try {
     		logger.info("fq value = " + body.get("fq").toString());
-    		Gson gson = new Gson();
-    		List<String> fqList = mapper.readValue(gson.toJson(body.get("fq").toString()), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+    		String[] fqList = body.get("fq").toString().split(",");
     		logger.info("********************** 2 " + fqList + "***************************");
     		for (String fq : fqList) {
     			logger.info("********************** 3 " + fq +"***************************");
-    			String fqFieldName = fq.split(":")[0];
+    			String fqFieldName = fq.trim().split(":")[0];
     			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
     			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
     				return true;
