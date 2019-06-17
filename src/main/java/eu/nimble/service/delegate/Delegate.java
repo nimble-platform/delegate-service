@@ -283,17 +283,22 @@ public class Delegate implements ServletContextListener {
     		totalElementPerEndpoint.put(entry.getKey(), totalElementForEndpoint);
     		sumTotalElements += totalElementForEndpoint;
     	}
-    	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0) {
+    	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0 || endpointList.size()==1) {
     		body.put("rows", requestedPageSize); 
     		return sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
     	}
     	// else, we need to decide how many results we want from each delegate
-   
-    	int totalElementsAggregated = 0;
+    	// TODO work on this logic!
+    	int numOfRowsAggregated = 0;
     	HashMap<ServiceEndpoint, String> aggregatedResults = new LinkedHashMap<ServiceEndpoint, String>();
     	for (ServiceEndpoint endpoint : endpointList) {
-    		int endpointRows = Math.round(totalElementPerEndpoint.get(endpoint) / ((float)sumTotalElements))*requestedPageSize;
-    		
+    		int totalElementOfEndpoint = totalElementPerEndpoint.get(endpoint);
+    		int endpointRows = Math.min(Math.round(totalElementOfEndpoint/((float)sumTotalElements))*requestedPageSize,(requestedPageSize-numOfRowsAggregated));
+    		List<ServiceEndpoint> listForRequest = new LinkedList<ServiceEndpoint>();
+    		listForRequest.add(endpoint);
+    		body.put("rows", endpointRows); // manipulate body values
+    		aggregatedResults.putAll(sendPostRequestToAllServices(listForRequest, postItemSearchLocalPath, body));
+    		numOfRowsAggregated += endpointRows;
     	}
     	
     	return aggregatedResults;
@@ -504,7 +509,11 @@ public class Delegate implements ServletContextListener {
         		}
         	}
         }
-        return uriBuilder.host(host).port(port).path(path).build();
+        uriBuilder.host(host).path(path);
+        if (port > 0) { // in case the request is sent to nginx, no port is needed (will be set to -1)
+        	uriBuilder.port(port);
+        }
+        return uriBuilder.build();
     }
     
     // forward post request
