@@ -472,18 +472,18 @@ public class Delegate implements ServletContextListener {
     	logger.info("body value before the change = " + body.toString());
     	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
     	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
-    	JsonArray jsonElementsToRemove = new JsonArray();
+    	
+    	List<String> facetFieldNewValue = new LinkedList<String>();
+    	
     	for (JsonElement element : fieldJsonObject) {
     		String fieldName = element.getAsString();
-    		if (fieldName != null && !localFieldNames.contains(fieldName)) {
-    			jsonElementsToRemove.add(element);
+    		if (fieldName != null && localFieldNames.contains(fieldName)) {
+    			facetFieldNewValue.add(fieldName);
     		}
     	}
-    	for (JsonElement element : jsonElementsToRemove) {
-    		logger.info("fieldName "+ element.toString() + " doesn't exist in local instance, removing it...");
-    		fieldJsonObject.remove(element);
-    	}
-    	body.put("facet", facetJsonObject.toString());
+    	Map<String, Object> facetField = new HashMap<String, Object>();
+    	facetField.put("field", facetFieldNewValue);
+    	body.put("facet", facetField);
     	logger.info("body value after the change = " + body.toString());
     }
     
