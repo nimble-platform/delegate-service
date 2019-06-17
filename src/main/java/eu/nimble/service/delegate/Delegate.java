@@ -76,9 +76,13 @@ public class Delegate implements ServletContextListener {
     private static int indexingServicePort;
     
     private static String getItemFieldsPath = "/item/fields";
+    private static String getItemFieldsLocalPath = "/item/fields/local";
     private static String getPartyFieldsPath = "/party/fields";
+    private static String getPartyFieldsLocalPath = "/party/fields/local";
     private static String postItemSearchPath = "/item/search";
+    private static String postItemSearchLocalPath = "/item/search/local";
     private static String postPartySearchPath = "/party/search";
+    private static String postPartySearchLocalPath = "/party/search/local";
     
     private static ObjectMapper mapper = new ObjectMapper();
     private static JsonParser jsonParser = new JsonParser();
@@ -140,7 +144,7 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/item/fields/local", queryParams);
+    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getItemFieldsLocalPath, queryParams);
     	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
@@ -158,7 +162,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
         URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, queryParams);
-        logger.info("got a request to endpoint /item/fields/local, forwarding to " + uri.toString());
+        logger.info("got a request to endpoint " + getItemFieldsLocalPath + ", forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
@@ -189,7 +193,7 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices("/party/fields/local", queryParams);
+    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getPartyFieldsLocalPath, queryParams);
     	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
@@ -207,7 +211,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
         URI uri = buildUri(indexingServiceUrl, indexingServicePort, getPartyFieldsPath, queryParams);
-        logger.info("got a request to endpoint /party/fields/local, forwarding to " + uri.toString());
+        logger.info("got a request to endpoint " + getPartyFieldsLocalPath + ", forwarding to " + uri.toString());
         
         Response response = httpClient.target(uri.toString()).request().get();
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
@@ -259,7 +263,7 @@ public class Delegate implements ServletContextListener {
     	// manipulate body in order to get results from all delegates.
     	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
     	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
-    	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, "/item/search/local", body);
+    	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
     	
     	int sumTotalElements = 0;
     	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
@@ -271,7 +275,7 @@ public class Delegate implements ServletContextListener {
     	}
     	if (sumTotalElements <= requestedPageSize) {
     		body.put("rows", requestedPageSize); 
-    		return sendPostRequestToAllServices(endpointList, "/item/search/local", body);
+    		return sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
     	}
     	// else, we need to decide how many results we want from each delegate
    
@@ -305,7 +309,7 @@ public class Delegate implements ServletContextListener {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return forwardPostRequest("/item/search/local", uri.toString(), body, headers);
+        return forwardPostRequest(postItemSearchLocalPath, uri.toString(), body, headers);
     }
     
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -333,7 +337,7 @@ public class Delegate implements ServletContextListener {
     		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 0);
     	}
     	
-    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices(endpointList, "/party/search/local", body);
+    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices(endpointList, postPartySearchLocalPath, body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
@@ -367,7 +371,7 @@ public class Delegate implements ServletContextListener {
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return forwardPostRequest("/party/search/local", uri.toString(), body, headers);
+        return forwardPostRequest(postPartySearchLocalPath, uri.toString(), body, headers);
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
@@ -402,7 +406,7 @@ public class Delegate implements ServletContextListener {
     }
     
     private Set<String> getLocalFieldNamesFromIndexingSerivce() {
-    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsPath, null);
+    	URI uri = buildUri(indexingServiceUrl, indexingServicePort, getItemFieldsLocalPath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
         Response response = httpClient.target(uri.toString()).request().get();
