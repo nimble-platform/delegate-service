@@ -100,7 +100,7 @@ public class Delegate implements ServletContextListener {
     		String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
     		if (indexingServiceUrlParts.length > 1) {
     			indexingServiceBaseUrl = indexingServiceUrlParts[0];
-    			indexingServicePathPrefix = String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
+    			indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
     			logger.info("indexing service prefix = " + indexingServicePathPrefix);
     		}
     		
@@ -110,7 +110,8 @@ public class Delegate implements ServletContextListener {
     	}
     	
         logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with frontend service param = " + frontendServiceUrl 
-        													+ ", indexing service param = " + indexingServiceBaseUrl + ":" + indexingServicePort + "...");
+        													+ ", indexing service base url = " + indexingServiceBaseUrl 
+        													+ ", indexing service port = " + indexingServicePort + "...");
         
         httpClient = ClientBuilder.newClient();
 
