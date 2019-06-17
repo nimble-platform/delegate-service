@@ -163,8 +163,12 @@ public class IndexingServiceResult {
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> getFinalResult() throws JsonParseException, JsonMappingException, IOException {
 		Map<String, Object> aggregatedResults = new LinkedHashMap<String, Object>();
-		
-		this.totalPages = (int) Math.ceil(((double)this.totalElements)/ this.pageSize);
+		if (this.pageSize == 0) {
+			this.totalPages = 1;
+		} 
+		else {
+			this.totalPages = (int) Math.ceil(((double)this.totalElements)/ this.pageSize);
+		}
 		
 		// merge results based on the data that was added to this object 
 		int index = 0;
