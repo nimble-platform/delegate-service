@@ -483,6 +483,8 @@ public class Delegate implements ServletContextListener {
     	}
     	Map<String, Object> facetField = new HashMap<String, Object>();
     	facetField.put("field", facetFieldNewValue);
+    	facetField.put("minCount", facetJsonObject.get("minCount").getAsInt());
+    	facetField.put("limit", facetJsonObject.get("limit").getAsInt());
     	body.put("facet", facetField);
     	logger.info("body value after the change = " + body.toString());
     }
