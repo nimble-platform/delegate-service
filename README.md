@@ -91,7 +91,7 @@ $ docker rm delegate-1 delegate-2 delegate-3
 ### deploy the delegate service on Staging
 follow these steps:
 1. git clone delegate service project
-2. go to the file `src/main/resources/eureka-client.properties` and change `eureka.name=Staging`
+2. go to the file `src/main/resources/eureka-client.properties` and change `eureka.name=Staging` and `eureka.homePageUrl=nimble-staging.salzburgresearch.at`
 3. build the project using mvn and create a docker image locally with the following command: `mvn compile ; mvn package ; docker build -t nimbleplatform/delegate-service:staging .`
 4. need to update docker-compose.yml and add these lines (under services):
 ```
@@ -112,7 +112,7 @@ follow these steps:
     networks:
       - infra
 ```
-(you need to update the ips and port for the staging instance, port = -1 if you're using no port in case like nginx)
+(you need to update the ips and port for the staging instance, port = -1 if you're using no port in case like nginx)  
 5. then in dev I ran the docker using `./run-dev.sh restart-single delegate-service`, not sure how you do it in staging
 
 
