@@ -328,7 +328,7 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search/local")
     public Response postItemSearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
+    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce(indexingServicePathPrefix+getItemFieldsPath);
     	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
@@ -389,7 +389,7 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search/local")
     public Response postPartySearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce();
+    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce(indexingServicePathPrefix+getPartyFieldsPath);
     	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
@@ -448,8 +448,8 @@ public class Delegate implements ServletContextListener {
     	return false;
     }
     
-    private Set<String> getLocalFieldNamesFromIndexingSerivce() {
-    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getItemFieldsPath, null);
+    private Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceRelativePath) {
+    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServiceRelativePath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
         Response response = httpClient.target(uri.toString()).request().get();
