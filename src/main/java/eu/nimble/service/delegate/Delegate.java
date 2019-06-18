@@ -308,7 +308,7 @@ public class Delegate implements ServletContextListener {
     	for (ServiceEndpoint endpoint : endpointList) {
     		int totalElementOfEndpoint = totalElementPerEndpoint.get(endpoint);
     		logger.info("totalElements of endpoint + " + endpoint.getHostName() + ":" + endpoint.getPort()+ " = " + totalElementOfEndpoint);
-    		int endpointRows = Math.min(Math.round(totalElementOfEndpoint/((float)sumTotalElements))*requestedPageSize,(requestedPageSize-numOfRowsAggregated));
+    		int endpointRows = Math.min(Math.round(totalElementOfEndpoint/((float)sumTotalElements)*requestedPageSize),(requestedPageSize-numOfRowsAggregated));
     		List<ServiceEndpoint> listForRequest = new LinkedList<ServiceEndpoint>();
     		listForRequest.add(endpoint);
     		body.put("rows", endpointRows); // manipulate body values
@@ -411,6 +411,7 @@ public class Delegate implements ServletContextListener {
     
     // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
     private List<Map<String, Object>> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
+    	logger.info("merging results of GET request based on field name");
     	List<Map<String, Object>> aggregatedResults = new LinkedList<Map<String, Object>>();
     	
     	for (String results : resultList.values()) {
@@ -427,7 +428,7 @@ public class Delegate implements ServletContextListener {
 						aggregatedResults.add(jsonObject);
 					}
 					else {
-						logger.info("field name + " + key + " already exist, skipping");
+						logger.info("field name = " + key + " already exist, skipping");
 					}
 				}
 			} catch (IOException e) {
