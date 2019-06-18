@@ -562,7 +562,7 @@ public class Delegate implements ServletContextListener {
             		uriBuilder.queryParam(queryParam.getKey(), paramValue);
             	}
             }
-            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            URI uri = uriBuilder.host(endpoint.getIp()).port(endpoint.getPort()).path(urlPath).build();
             
             logger.info("sending the request to " + endpoint.toString() + "...");
             Future<Response> result = httpClient.target(uri.toString()).request().async().get();
@@ -577,7 +577,7 @@ public class Delegate implements ServletContextListener {
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
-            URI uri = buildUri(endpoint.getHostName(), endpoint.getPort(), urlPath, null);
+            URI uri = buildUri(endpoint.getIp(), endpoint.getPort(), urlPath, null);
             logger.info("sending the request to " + endpoint.toString() + "...");
             Future<Response> result = httpClient.target(uri.toString()).request().async().post(Entity.json(body));
             futureList.add(result);
@@ -601,7 +601,7 @@ public class Delegate implements ServletContextListener {
             } catch(Exception e) {
                 logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +
                 			" appName:" + endpoint.getAppName() +
-                            " (" + endpoint.getHostName() +
+                            " (" + endpoint.getIp() +
                             ":" + endpoint.getPort() + ") - " +
                             e.getMessage());
             }
@@ -637,7 +637,7 @@ public class Delegate implements ServletContextListener {
         				instanceInfo.getAppName() + "/" +
         				instanceInfo.getVIPAddress() + "(" +
         				instanceInfo.getId() +") " +
-        				instanceInfo.getHostName() + ":" +
+        				instanceInfo.getIPAddr() + ":" +
         				instanceInfo.getPort());
         } catch (Exception e) {
         	logger.error(e.getMessage());
@@ -654,7 +654,7 @@ public class Delegate implements ServletContextListener {
         for (InstanceInfo info : instanceList) {
            // Filter out services that are not UP
            if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
-               delegateList.add(new ServiceEndpoint(info.getId(), info.getHostName(), info.getPort(), info.getAppName()));
+               delegateList.add(new ServiceEndpoint(info.getId(), info.getIPAddr(), info.getPort(), info.getAppName()));
            }
         }
         return delegateList;

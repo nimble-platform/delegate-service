@@ -7,14 +7,14 @@ package eu.nimble.service.delegate;
  */
 public class ServiceEndpoint {
     private String id;
-    private  String hostName;
+    private  String ip;
     private int port;
     private String appName;
     private String frontendServiceUrl;
 
-    public ServiceEndpoint(String id, String hostName, int port, String appName) {
+    public ServiceEndpoint(String id, String ip, int port, String appName) {
         this.id = id;
-        this.hostName = hostName;
+        this.ip = ip;
         this.port = port;
         this.appName = appName;
     }
@@ -23,8 +23,8 @@ public class ServiceEndpoint {
     	return this.id;
     }
     
-    public String getHostName() {
-    	return this.hostName;
+    public String getIp() {
+    	return this.ip;
     }
     
     public int getPort() {
@@ -47,7 +47,7 @@ public class ServiceEndpoint {
     public String toString() {
     	return "Service Endpoint:\n\t"
     			+ "id: " + this.id + ",\n\t"
-				+ "hostname: " + this.hostName + ",\n\t"
+				+ "ip: " + this.ip + ",\n\t"
 				+ "port: " + this.port + ",\n\t"
 				+ "frontendServiceUrl: " + this.frontendServiceUrl + ",\n\t"
 				+ "appName: " + this.appName + "\n";  
