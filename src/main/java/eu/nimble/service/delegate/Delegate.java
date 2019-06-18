@@ -156,7 +156,7 @@ public class Delegate implements ServletContextListener {
         }
     	logger.info("query params: " + queryParams.toString());
     	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getItemFieldsLocalPath, queryParams);
-    	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
+    	List<Map<String, Object>> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -205,7 +205,7 @@ public class Delegate implements ServletContextListener {
         }
     	logger.info("query params: " + queryParams.toString());
     	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getPartyFieldsLocalPath, queryParams);
-    	List<Object> aggregatedResults = mergeGetResponsesByFieldName(resultList);
+    	List<Map<String, Object>> aggregatedResults = mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -406,8 +406,8 @@ public class Delegate implements ServletContextListener {
     /***********************************   indexing-service extra logic   ***********************************/
     
     // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
-    private List<Object> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
-    	List<Object> aggregatedResults = new LinkedList<Object>();
+    private List<Map<String, Object>> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
+    	List<Map<String, Object>> aggregatedResults = new LinkedList<Map<String, Object>>();
     	
     	for (String results : resultList.values()) {
     		if (results == null || results.isEmpty()) {
@@ -419,8 +419,13 @@ public class Delegate implements ServletContextListener {
 				for (int i=0; i<json.size(); ++i) {
 					Map<String, Object> jsonObject = json.get(i);
 					String key = jsonObject.get("fieldName").toString();
+					logger.info("checkig field name = " + key);
 					if (!containsFieldName(aggregatedResults, key)) {
+						logger.info("field name + " + key + " doesn't exist yet, adding it");
 						aggregatedResults.add(jsonObject);
+					}
+					else {
+						logger.info("field name + " + key + " already exist, skipping");
 					}
 				}
 			} catch (IOException e) {
@@ -430,15 +435,12 @@ public class Delegate implements ServletContextListener {
     	return aggregatedResults;
     }
     
-    @SuppressWarnings("unchecked")
-	private boolean containsFieldName(List<Object> aggregatedResults, String fieldName) throws JsonParseException, JsonMappingException, IOException {
-    	for (Object obj : aggregatedResults) {
-    		Map<String, Object> jsonObject = mapper.readValue(obj.toString(), Map.class);
+	private boolean containsFieldName(List<Map<String, Object>> aggregatedResults, String fieldName) {
+    	for (Map<String, Object> jsonObject : aggregatedResults) {
     		String key = jsonObject.get("fieldName").toString();
     		if (key.equals(fieldName)) {
     			return true;
     		}
-    		
     	}
     	return false;
     }
