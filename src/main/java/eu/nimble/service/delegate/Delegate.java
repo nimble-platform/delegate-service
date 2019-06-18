@@ -301,14 +301,18 @@ public class Delegate implements ServletContextListener {
     	}
     	// else, we need to decide how many results we want from each delegate
     	// TODO work on this logic!
+    	logger.info("we need to decide how many results to get from each delegate");
+    	logger.info("sum of total elements = " + sumTotalElements);
     	int numOfRowsAggregated = 0;
     	HashMap<ServiceEndpoint, String> aggregatedResults = new LinkedHashMap<ServiceEndpoint, String>();
     	for (ServiceEndpoint endpoint : endpointList) {
     		int totalElementOfEndpoint = totalElementPerEndpoint.get(endpoint);
+    		logger.info("totalElements of endpoint + " + endpoint.getHostName() + ":" + endpoint.getPort()+ " = " + totalElementOfEndpoint);
     		int endpointRows = Math.min(Math.round(totalElementOfEndpoint/((float)sumTotalElements))*requestedPageSize,(requestedPageSize-numOfRowsAggregated));
     		List<ServiceEndpoint> listForRequest = new LinkedList<ServiceEndpoint>();
     		listForRequest.add(endpoint);
     		body.put("rows", endpointRows); // manipulate body values
+    		logger.info("requesting from endpoint " + endpointRows + " rows, body = " + body);
     		aggregatedResults.putAll(sendPostRequestToAllServices(listForRequest, postItemSearchLocalPath, body));
     		numOfRowsAggregated += endpointRows;
     	}
@@ -419,9 +423,7 @@ public class Delegate implements ServletContextListener {
 				for (int i=0; i<json.size(); ++i) {
 					Map<String, Object> jsonObject = json.get(i);
 					String key = jsonObject.get("fieldName").toString();
-					logger.info("checkig field name = " + key);
 					if (!containsFieldName(aggregatedResults, key)) {
-						logger.info("field name + " + key + " doesn't exist yet, adding it");
 						aggregatedResults.add(jsonObject);
 					}
 					else {
@@ -500,7 +502,6 @@ public class Delegate implements ServletContextListener {
     	if (body.get("facet") == null) {
     		return;
     	}
-    	logger.info("body value before the change = " + body.toString());
     	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
     	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
     	
@@ -517,7 +518,6 @@ public class Delegate implements ServletContextListener {
     	facetField.put("minCount", facetJsonObject.get("minCount").getAsInt());
     	facetField.put("limit", facetJsonObject.get("limit").getAsInt());
     	body.put("facet", facetField);
-    	logger.info("body value after the change = " + body.toString());
     }
     
     /***********************************   indexing-service extra logic - END   ***********************************/
