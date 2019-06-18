@@ -637,7 +637,7 @@ public class Delegate implements ServletContextListener {
         				instanceInfo.getAppName() + "/" +
         				instanceInfo.getVIPAddress() + "(" +
         				instanceInfo.getId() +") " +
-        				instanceInfo.getHostName() + ":" +
+        				instanceInfo.getHomePageUrl() + ":" +
         				instanceInfo.getPort());
         } catch (Exception e) {
         	logger.error(e.getMessage());
@@ -654,7 +654,8 @@ public class Delegate implements ServletContextListener {
         for (InstanceInfo info : instanceList) {
            // Filter out services that are not UP
            if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
-               delegateList.add(new ServiceEndpoint(info.getId(), info.getHostName(), info.getPort(), info.getAppName()));
+        	   
+               delegateList.add(new ServiceEndpoint(info.getId(), info.getHomePageUrl(), info.getPort(), info.getAppName()));
            }
         }
         return delegateList;
