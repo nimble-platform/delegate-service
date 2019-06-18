@@ -419,7 +419,7 @@ public class Delegate implements ServletContextListener {
 				for (int i=0; i<json.size(); ++i) {
 					Map<String, Object> jsonObject = json.get(i);
 					String key = jsonObject.get("fieldName").toString();
-					if (!aggregatedResults.contains(key)) {
+					if (!containsFieldName(aggregatedResults, key)) {
 						aggregatedResults.add(jsonObject);
 					}
 				}
@@ -428,6 +428,19 @@ public class Delegate implements ServletContextListener {
 			}
     	}
     	return aggregatedResults;
+    }
+    
+    @SuppressWarnings("unchecked")
+	private boolean containsFieldName(List<Object> aggregatedResults, String fieldName) throws JsonParseException, JsonMappingException, IOException {
+    	for (Object obj : aggregatedResults) {
+    		Map<String, Object> jsonObject = mapper.readValue(obj.toString(), Map.class);
+    		String key = jsonObject.get("fieldName").toString();
+    		if (key.equals(fieldName)) {
+    			return true;
+    		}
+    		
+    	}
+    	return false;
     }
     
     private Set<String> getLocalFieldNamesFromIndexingSerivce() {
