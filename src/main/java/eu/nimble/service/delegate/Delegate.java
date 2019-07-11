@@ -10,13 +10,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.netflix.appinfo.ApplicationInfoManager;
-import com.netflix.appinfo.InstanceInfo;
-import com.netflix.appinfo.MyDataCenterInstanceConfig;
-import com.netflix.appinfo.providers.EurekaConfigBasedInstanceInfoProvider;
-import com.netflix.discovery.DefaultEurekaClientConfig;
-import com.netflix.discovery.DiscoveryClient;
-import com.netflix.discovery.EurekaClient;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.client.Client;
@@ -66,9 +59,7 @@ public class Delegate implements ServletContextListener {
 
     private static Logger logger = LogManager.getLogger(Delegate.class);
 
-    private static ApplicationInfoManager applicationInfoManager;
-    private static EurekaClient eurekaClient;
-    private static String vipAddress = "eu.nimble.delegate";
+    private static EurekaHandler eurekaHandler = new EurekaHandler();
     
     private static Client httpClient;
     
@@ -96,12 +87,16 @@ public class Delegate implements ServletContextListener {
     	try {
     		frontendServiceUrl = System.getenv("FRONTEND_URL");
     		indexingServiceBaseUrl = System.getenv("INDEXING_SERVICE_URL");
-    		indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		try {
+    			indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+    		}
+    		catch (Exception ex) {
+    			indexingServicePort = -1;
+    		}
     		String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
     		if (indexingServiceUrlParts.length > 1) {
     			indexingServiceBaseUrl = indexingServiceUrlParts[0];
     			indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
-    			logger.info("indexing service prefix = " + indexingServicePathPrefix);
     		}
     		else {
     			indexingServicePathPrefix = "";
@@ -111,13 +106,14 @@ public class Delegate implements ServletContextListener {
     		logger.warn("env vars are not set as expected");
     	}
     	
-        logger.info("Delegate service is being initialized (vipAddress = " + vipAddress + "), with frontend service param = " + frontendServiceUrl 
-        													+ ", indexing service base url = " + indexingServiceBaseUrl 
-        													+ ", indexing service port = " + indexingServicePort + "...");
+        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl 
+        											+ ", indexing service base url = " + indexingServiceBaseUrl 
+        											+ ", indexing service prefix = " + indexingServicePathPrefix 
+        											+ ", indexing service port = " + indexingServicePort + "...");
         
         httpClient = ClientBuilder.newClient();
 
-        if (!initEureka()) {
+        if (!eurekaHandler.initEureka()) {
             logger.error("Failed to initialize Eureka client");
             return;
         }
@@ -126,7 +122,7 @@ public class Delegate implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent arg0) {
-        applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.DOWN);
+    	eurekaHandler.destroy();
         logger.info("Delegate service has been destroyed");
     }
     
@@ -259,7 +255,7 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
+    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(eurekaHandler.getId()));
     	}
     	
     	return Response.status(Response.Status.OK)
@@ -272,7 +268,7 @@ public class Delegate implements ServletContextListener {
 	private HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	int requestedPageSize = Integer.parseInt(body.get("rows").toString()); // save it before manipulating
     	// manipulate body in order to get results from all delegates.
-    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
     	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
     	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
     	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
@@ -357,7 +353,7 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search")
     public Response federatedPostPartySearch(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated post party search");
-    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult;
     	if (body.get("start") != null) {
@@ -372,7 +368,7 @@ public class Delegate implements ServletContextListener {
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(applicationInfoManager.getInfo().getId()));
+    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(eurekaHandler.getId()));
     	}
     	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
@@ -565,7 +561,7 @@ public class Delegate implements ServletContextListener {
     // Sends the get request to all the Delegate services which are registered in the Eureka server
     private HashMap<ServiceEndpoint, String> sendGetRequestToAllServices(String urlPath, HashMap<String, List<String>> queryParams) {
     	logger.info("send get requests to all delegates");
-    	List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
@@ -628,54 +624,12 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   Http Requests - END   ***********************************/
     
-    
-    /***********************************   Eureka   ***********************************/
-    
     @GET
     @Path("eureka")
     @Produces({ MediaType.APPLICATION_JSON })
     // Return the Delegate services registered in Eureka server (Used for debug)
     public Response eureka() {
-        List<ServiceEndpoint> endpointList = getEndpointsFromEureka();
+        List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         return Response.status(Response.Status.OK).entity(endpointList).build();
     }
-    
-    // Initializes Eureka client and registers the service with the Eureka server
-    private boolean initEureka() {
-        try {
-        	logger.info("trying to init eureka client");
-        	MyDataCenterInstanceConfig instanceConfig = new MyDataCenterInstanceConfig();
-        	InstanceInfo instanceInfo = new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get();
-        	applicationInfoManager = new ApplicationInfoManager(instanceConfig, instanceInfo);
-        	eurekaClient = new DiscoveryClient(applicationInfoManager, new DefaultEurekaClientConfig());
-        	applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.UP);
-        	logger.info("Delegate has been registered in Eureka: " +
-        				instanceInfo.getAppName() + "/" +
-        				instanceInfo.getVIPAddress() + "(" +
-        				instanceInfo.getId() +") " +
-        				instanceInfo.getHomePageUrl() + ":" +
-        				instanceInfo.getPort());
-        } catch (Exception e) {
-        	logger.error(e.getMessage());
-        	e.printStackTrace();
-            return false;
-        }
-        return true;
-    }
-    
-    // Returns a list of Delegate services registered in Eureka server
-    private List<ServiceEndpoint> getEndpointsFromEureka() {
-        List<ServiceEndpoint> delegateList = new ArrayList<ServiceEndpoint>();
-        List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddress(vipAddress, false);
-        for (InstanceInfo info : instanceList) {
-           // Filter out services that are not UP
-           if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
-        	   
-               delegateList.add(new ServiceEndpoint(info.getId(), info.getHomePageUrl(), info.getPort(), info.getAppName()));
-           }
-        }
-        return delegateList;
-    }
-    
-    /***********************************   Eureka - END   ***********************************/
 }

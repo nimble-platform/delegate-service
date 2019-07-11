@@ -89,10 +89,6 @@ public class IndexingServiceResult {
 		this.resultsPerEndpoint.put(endpoint, resultArrayInList);
 	}
 	
-	private void addResult(JsonObject resultToAdd) {
-		this.result.add(resultToAdd);
-	}
-	
 	private void addFacets(JsonElement facetsToAddElement) {
 		if (facetsToAddElement == null) {
 			return;
@@ -177,7 +173,7 @@ public class IndexingServiceResult {
     		ServiceEndpoint endpoint = endpointsArray.get(index);
     		LinkedList<JsonObject> results = resultsPerEndpoint.get(endpoint);
     		if (!results.isEmpty()) {
-    			addResult(results.removeFirst());
+    			this.result.add(results.removeFirst());
     			index++;
     		}
     		else {
