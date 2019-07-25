@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -67,7 +68,10 @@ public class Delegate implements ServletContextListener {
     private static String indexingServiceBaseUrl;
     private static String indexingServicePathPrefix;
     private static int indexingServicePort;
-    
+    private static String catalogueServiceBaseUrl;
+    private static String catalogueServicePathPrefix;
+    private static int catalogueServicePort;
+
     private static String getItemFieldsPath = "/item/fields";
     private static String getItemFieldsLocalPath = "/item/fields/local";
     private static String getPartyFieldsPath = "/party/fields";
@@ -76,7 +80,26 @@ public class Delegate implements ServletContextListener {
     private static String postItemSearchLocalPath = "/item/search/local";
     private static String postPartySearchPath = "/party/search";
     private static String postPartySearchLocalPath = "/party/search/local";
-    
+
+    /** Catalogue Service Paths **/
+    private static String getCatalogueLinePath = "/catalogue/%s/catalogueline/%s";
+    private static String getCatalogueLineLocalPath = "/catalogue/%s/catalogueline/%s/local";
+    private static String getCatalogueLinesPath = "/catalogue/%s/cataloguelines";
+    private static String getCatalogueLinesLocalPath = "/catalogue/%s/cataloguelines/local";
+    private static String getCatalogueLineByHjidPath = "/catalogueline/%s";
+    private static String getCatalogueLineByHjidLocalPath = "/catalogueline/%s/local";
+    private static String getCataloguePath = "/catalogue/%s/%s";
+    private static String getCataloguePathLocal = "/catalogue/%s/%s/local";
+    private static String getBinaryContentPath = "/binary-content";
+    private static String getBinaryContentLocalPath = "/binary-content/local";
+    private static String getBinaryContentsPath = "/binary-contents";
+    private static String getBinaryContentsLocalPath = "/binary-contents/local";
+    private static String getBase64BinaryContentPath = "/binary-content/raw";
+    private static String getBase64BinaryContentLocalPath = "/binary-content/raw/local";
+
+    /** Catalogue Bearer Token **/
+    private static String catalogueBearerToken = "dummyTokenHere";
+
     private static ObjectMapper mapper = new ObjectMapper();
     private static JsonParser jsonParser = new JsonParser();
     
@@ -84,33 +107,51 @@ public class Delegate implements ServletContextListener {
     
     public void contextInitialized(ServletContextEvent arg0) 
     {
-    	try {
-    		frontendServiceUrl = System.getenv("FRONTEND_URL");
-    		indexingServiceBaseUrl = System.getenv("INDEXING_SERVICE_URL");
-    		try {
-    			indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-    		}
-    		catch (Exception ex) {
-    			indexingServicePort = -1;
-    		}
-    		String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
-    		if (indexingServiceUrlParts.length > 1) {
-    			indexingServiceBaseUrl = indexingServiceUrlParts[0];
-    			indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
-    		}
-    		else {
-    			indexingServicePathPrefix = "";
-    		}
-    	}
-    	catch (Exception ex) {
-    		logger.warn("env vars are not set as expected");
-    	}
-    	
-        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl 
-        											+ ", indexing service base url = " + indexingServiceBaseUrl 
-        											+ ", indexing service prefix = " + indexingServicePathPrefix 
-        											+ ", indexing service port = " + indexingServicePort + "...");
-        
+        try {
+            frontendServiceUrl = System.getenv("FRONTEND_URL");
+            indexingServiceBaseUrl = System.getenv("INDEXING_SERVICE_URL");
+            catalogueServiceBaseUrl = System.getenv("CATALOGUE_SERVICE_URL");
+            try {
+                indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
+            }
+            catch (Exception ex) {
+                indexingServicePort = -1;
+            }
+            try {
+                catalogueServicePort = Integer.parseInt(System.getenv("CATALOGUE_SERVICE_PORT"));
+            }
+            catch (Exception e){
+                catalogueServicePort = -1;
+            }
+            String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
+            if (indexingServiceUrlParts.length > 1) {
+                indexingServiceBaseUrl = indexingServiceUrlParts[0];
+                indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
+            }
+            else {
+                indexingServicePathPrefix = "";
+            }
+            String[] catalogueServiceUrlParts = catalogueServiceBaseUrl.split("/");
+            if (catalogueServiceUrlParts.length > 1) {
+                catalogueServiceBaseUrl = catalogueServiceUrlParts[0];
+                catalogueServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(catalogueServiceUrlParts, 1, catalogueServiceUrlParts.length));
+            }
+            else {
+                catalogueServicePathPrefix = "";
+            }
+        }
+        catch (Exception ex) {
+            logger.warn("env vars are not set as expected");
+        }
+
+        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl
+                + ", catalogue service base url = " + catalogueServiceBaseUrl
+                + ", catalogue service prefix = " + catalogueServicePathPrefix
+                + ", catalogue service port = " + catalogueServicePort
+                + ", indexing service base url = " + indexingServiceBaseUrl
+                + ", indexing service prefix = " + indexingServicePathPrefix
+                + ", indexing service port = " + indexingServicePort + "...");
+
         httpClient = ClientBuilder.newClient();
 
         if (!eurekaHandler.initEureka()) {
@@ -160,7 +201,7 @@ public class Delegate implements ServletContextListener {
     				   .build();
     }
     
-    // a REST call that should be used between delegates. 
+    // a REST call that should be used between delegates.
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
     @GET
@@ -209,7 +250,7 @@ public class Delegate implements ServletContextListener {
     				   .build();
     }
     
-    // a REST call that should be used between delegates. 
+    // a REST call that should be used between delegates.
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
     @GET
@@ -316,7 +357,7 @@ public class Delegate implements ServletContextListener {
     	return aggregatedResults;
     }
     
-    // a REST call that should be used between delegates. 
+    // a REST call that should be used between delegates.
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
     @POST
@@ -377,7 +418,7 @@ public class Delegate implements ServletContextListener {
     	
     }
     
-    // a REST call that should be used between delegates. 
+    // a REST call that should be used between delegates.
     // the origin delegate sends a request and the target delegate will perform the query locally.
     // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
 	@POST
@@ -401,8 +442,300 @@ public class Delegate implements ServletContextListener {
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
-    
-    
+
+    /***********************************   Catalogue Service **************************************************/
+
+    /***********************************   /catalogue/{catalogueUuid}/catalogueline/{lineId} ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogue/{catalogueUuid}/catalogueline/{lineId}")
+    public Response federatedGetCatalogueLine(@Context HttpHeaders headers, @PathParam("catalogueUuid") String catalogueUuid, @PathParam("lineId") String lineId, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get catalogue line");
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        String path = String.format(getCatalogueLineLocalPath,catalogueUuid,lineId);
+        String result = sendGetRequest(path,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/catalogue/{catalogueUuid}/catalogueline/{lineId}/local")
+    public Response getCatalogueLine(@Context HttpHeaders headers, @PathParam("catalogueUuid") String catalogueUuid, @PathParam("lineId") String lineId) {
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        String path = String.format(getCatalogueLinePath,catalogueUuid,lineId);
+        path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + path : path;
+        URI uri = buildUri(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + String.format(getCatalogueLinePath,catalogueUuid,lineId) + ", forwarding to " + uri.toString());
+
+        return sendGetRequest(uri);
+    }
+
+    /***********************************   /catalogue/{catalogueUuid}/catalogueline/{lineId} - END *********************************/
+
+    /***********************************   /catalogue/{catalogueUuid}/cataloguelines ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogue/{catalogueUuid}/cataloguelines")
+    public Response federatedGetCatalogueLines(@Context HttpHeaders headers, @PathParam("catalogueUuid") String catalogueUuid,@QueryParam("lineIds") List<String> lineIds, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get catalogue lines");
+
+        String lineIdsQueryParam = "";
+        int size = lineIds.size();
+        for(int i = 0; i < size; i++){
+            if(i == size-1){
+                lineIdsQueryParam += lineIds.get(i);
+            }
+            else{
+                lineIdsQueryParam += lineIds.get(i) + ",";
+            }
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("lineIds",lineIdsQueryParam);
+
+        String path = String.format(getCatalogueLinesLocalPath,catalogueUuid);
+        String result = sendGetRequest(path,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/catalogue/{catalogueUuid}/cataloguelines/local")
+    public Response getCatalogueLines(@Context HttpHeaders headers, @PathParam("catalogueUuid") String catalogueUuid,@QueryParam("lineIds") List<String> lineIds) {
+
+        String lineIdsQueryParam = "";
+        int size = lineIds.size();
+        for(int i = 0; i < size; i++){
+            if(i == size-1){
+                lineIdsQueryParam += lineIds.get(i);
+            }
+            else{
+                lineIdsQueryParam += lineIds.get(i) + ",";
+            }
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("lineIds",lineIdsQueryParam);
+
+        String path = String.format(getCatalogueLinesPath,catalogueUuid);
+        path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + path : path;
+        URI uri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + String.format(getCatalogueLinesPath,catalogueUuid) + ", forwarding to " + uri.toString());
+
+        return sendGetRequest(uri);
+    }
+
+    /***********************************   /catalogue/{catalogueUuid}/cataloguelines - END *********************************/
+
+    /***********************************   /catalogueline/{hjid} ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogueline/{hjid}")
+    public Response federatedGetCatalogueLineByHjid(@Context HttpHeaders headers, @PathParam("hjid") Long hjid, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get catalogue line by hjid");
+
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+
+
+        String path = String.format(getCatalogueLineByHjidLocalPath,hjid);
+        String result = sendGetRequest(path,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/catalogueline/{hjid}/local")
+    public Response getCatalogueLineByHjid(@Context HttpHeaders headers, @PathParam("hjid") Long hjid) {
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+
+        String path = String.format(getCatalogueLineByHjidPath,hjid);
+        path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + path : path;
+        URI uri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + String.format(getCatalogueLineByHjidPath,hjid) + ", forwarding to " + uri.toString());
+
+        return sendGetRequest(uri);
+    }
+
+    /***********************************   /catalogueline/{hjid} - END *********************************/
+
+    /***********************************   /catalogue/{standard}/{uuid} ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogue/{standard}/{uuid}")
+    public Response federatedGetCatalogue(@Context HttpHeaders headers, @PathParam("standard") String standard,@PathParam("uuid") String uuid, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get catalogue line by hjid");
+
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+
+        String path = String.format(getCataloguePathLocal,standard,uuid);
+        String result = sendGetRequest(path,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/catalogue/{standard}/{uuid}/local")
+    public Response getCatalogue(@Context HttpHeaders headers, @PathParam("standard") String standard,@PathParam("uuid") String uuid) {
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+
+        String path = String.format(getCataloguePath,standard,uuid);
+        path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + path : path;
+        URI uri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + String.format(getCataloguePath,standard,uuid) + ", forwarding to " + uri.toString());
+
+        return sendGetRequest(uri);
+    }
+
+    /***********************************   /catalogue/{standard}/{uuid} - END *********************************/
+
+    /***********************************   /binary-content ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/binary-content")
+    public Response federatedGetBinaryContent(@Context HttpHeaders headers, @QueryParam("uri") String uri, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get binary content");
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uri",uri);
+
+        String result = sendGetRequest(getBinaryContentLocalPath,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/binary-content/local")
+    public Response getBinaryContent(@Context HttpHeaders headers, @QueryParam("uri") String uri) {
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uri",uri);
+
+        String path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + getBinaryContentPath : getBinaryContentPath;
+        URI catalogUri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + getBinaryContentPath + ", forwarding to " + catalogUri.toString());
+
+        return sendGetRequest(catalogUri);
+    }
+
+    /***********************************   /binary-content - END *********************************/
+
+    /***********************************   /binary-contents ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/binary-contents")
+    public Response federatedGetBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get binary contents");
+
+        String urisQueryParam = "";
+        int size = uris.size();
+        for(int i = 0; i < size; i++){
+            if(i == size-1){
+                urisQueryParam += uris.get(i);
+            }
+            else{
+                urisQueryParam += uris.get(i) + ",";
+            }
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uris",urisQueryParam);
+
+        String result = sendGetRequest(getBinaryContentsLocalPath,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/binary-contents/local")
+    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) {
+
+        String urisQueryParam = "";
+        int size = uris.size();
+        for(int i = 0; i < size; i++){
+            if(i == size-1){
+                urisQueryParam += uris.get(i);
+            }
+            else{
+                urisQueryParam += uris.get(i) + ",";
+            }
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uris",urisQueryParam);
+
+        String path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + getBinaryContentsPath : getBinaryContentsPath;
+        URI catalogUri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + getBinaryContentsPath + ", forwarding to " + catalogUri.toString());
+
+        return sendGetRequest(catalogUri);
+    }
+
+    /***********************************   /binary-contents - END *********************************/
+
+    /***********************************   /binary-content/raw ***************************************/
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/binary-content/raw")
+    public Response federatedGetBase64BinaryContent(@Context HttpHeaders headers, @QueryParam("uri") String uri, @QueryParam("delegateId") String delegateId) {
+        logger.info("called federated get Base 64 binary content");
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uri",uri);
+
+        String result = sendGetRequest(getBase64BinaryContentLocalPath,queryParams,delegateId);
+
+        return Response.status(Response.Status.OK)
+                .type(MediaType.APPLICATION_JSON)
+                .entity(result)
+                .build();
+    }
+
+    @GET
+    @Path("/binary-content/raw/local")
+    public Response getBase64BinaryContent(@Context HttpHeaders headers, @QueryParam("uri") String uri) {
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uri",uri);
+
+        String path = catalogueServicePathPrefix != null ? catalogueServicePathPrefix + "/" + getBase64BinaryContentPath : getBase64BinaryContentPath;
+        URI catalogUri = buildUriWithStringParams(catalogueServiceBaseUrl, catalogueServicePort, path, queryParams);
+        logger.info("got a request to endpoint " + getBase64BinaryContentPath + ", forwarding to " + catalogUri.toString());
+
+        return sendGetRequest(catalogUri);
+    }
+
+    /***********************************   /binary-content/raw - END *********************************/
+
     /***********************************   indexing-service extra logic   ***********************************/
     
     // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
@@ -521,7 +854,23 @@ public class Delegate implements ServletContextListener {
     
     
     /***********************************   Http Requests   ***********************************/
-    
+
+    private URI buildUriWithStringParams(String host, int port, String path, HashMap<String, String> queryParams) {
+        // Prepare the destination URL for the request
+        UriBuilder uriBuilder = UriBuilder.fromUri("");
+        uriBuilder.scheme("http");
+        if (queryParams != null) {
+            for (Entry<String, String> queryParam : queryParams.entrySet()) {
+                uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
+            }
+        }
+        uriBuilder.host(host).path(path);
+        if (port > 0) { // in case the request is sent to nginx, no port is needed (will be set to -1)
+            uriBuilder.port(port);
+        }
+        return uriBuilder.build();
+    }
+
     private URI buildUri(String host, int port, String path, HashMap<String, List<String>> queryParams) {
     	// Prepare the destination URL for the request
         UriBuilder uriBuilder = UriBuilder.fromUri("");
@@ -557,7 +906,64 @@ public class Delegate implements ServletContextListener {
         	return response;
         }
     }
-    
+
+    private Response sendGetRequest(URI uri){
+        Response response = httpClient.target(uri.toString()).request().header("Authorization",catalogueBearerToken).get();
+        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
+            String data = response.readEntity(String.class);
+            return Response.status(Status.OK)
+                    .entity(data)
+                    .type(MediaType.APPLICATION_JSON)
+                    .header("frontendServiceUrl", frontendServiceUrl)
+                    .build();
+        }
+        else {
+            return response;
+        }
+    }
+
+    private String sendGetRequest(String urlPath,HashMap<String, String> queryParams, String delegateId){
+        // if no delegate is specified, send Get request to the local one
+        delegateId = delegateId != null ? delegateId: eurekaHandler.getId();
+        logger.info("send get request to delegate {}",delegateId);
+
+        List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
+
+        for (ServiceEndpoint endpoint : endpointList) {
+            if(endpoint.getId().contentEquals(delegateId)){
+                // Prepare the destination URL
+                UriBuilder uriBuilder = UriBuilder.fromUri("");
+                uriBuilder.scheme("http");
+
+                // add all query params to the request
+                for (Entry<String, String> queryParam : queryParams.entrySet()) {
+                    uriBuilder.queryParam(queryParam.getKey(),queryParam.getValue());
+                }
+
+                URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+
+                logger.info("sending the request to " + endpoint.toString() + "...");
+                Future<Response> result = httpClient.target(uri.toString()).request().async().get();
+
+                logger.info("got response from " + endpoint.toString());
+                try {
+                    Response res = result.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+                    String data = res.readEntity(String.class);
+                    endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
+                    logger.info("data :" + data);
+                    return data;
+                } catch(Exception e) {
+                    logger.warn("Failed to send get request to eureka endpoint: id: " +  endpoint.getId() +
+                            " appName:" + endpoint.getAppName() +
+                            " (" + endpoint.getHostName() +
+                            ":" + endpoint.getPort() + ") - " +
+                            e.getMessage());
+                }
+            }
+        }
+        return null;
+    }
+
     // Sends the get request to all the Delegate services which are registered in the Eureka server
     private HashMap<ServiceEndpoint, String> sendGetRequestToAllServices(String urlPath, HashMap<String, List<String>> queryParams) {
     	logger.info("send get requests to all delegates");
