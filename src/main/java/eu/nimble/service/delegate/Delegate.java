@@ -5,16 +5,14 @@ import org.apache.logging.log4j.Logger;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+
+import eu.nimble.service.delegate.eureka.EurekaHandler;
+import eu.nimble.service.delegate.eureka.ServiceEndpoint;
+import eu.nimble.service.delegate.http.HttpHelper;
+import eu.nimble.service.delegate.indexing.IndexingServiceHelper;
+import eu.nimble.service.delegate.indexing.IndexingServiceResult;
 
 import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -27,23 +25,15 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletContextEvent;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.io.IOException;
 import java.net.URI;
 
@@ -55,30 +45,16 @@ import java.net.URI;
 @ApplicationPath("/")
 @Path("/")
 public class Delegate implements ServletContextListener {
-    private static final int REQ_TIMEOUT_SEC = 3;
-
     private static Logger logger = LogManager.getLogger(Delegate.class);
 
-    private static EurekaHandler eurekaHandler = new EurekaHandler();
-    
-    private static Client httpClient;
+    private static EurekaHandler eurekaHandler;
+    private static HttpHelper httpHelper;
+    private static IndexingServiceHelper indexingServiceHelper;
     
     private static String frontendServiceUrl;
     private static String indexingServiceBaseUrl;
     private static String indexingServicePathPrefix;
     private static int indexingServicePort;
-    
-    private static String getItemFieldsPath = "/item/fields";
-    private static String getItemFieldsLocalPath = "/item/fields/local";
-    private static String getPartyFieldsPath = "/party/fields";
-    private static String getPartyFieldsLocalPath = "/party/fields/local";
-    private static String postItemSearchPath = "/item/search";
-    private static String postItemSearchLocalPath = "/item/search/local";
-    private static String postPartySearchPath = "/party/search";
-    private static String postPartySearchLocalPath = "/party/search/local";
-    
-    private static ObjectMapper mapper = new ObjectMapper();
-    private static JsonParser jsonParser = new JsonParser();
     
     /***********************************   Servlet Context   ***********************************/
     
@@ -111,7 +87,9 @@ public class Delegate implements ServletContextListener {
         											+ ", indexing service prefix = " + indexingServicePathPrefix 
         											+ ", indexing service port = " + indexingServicePort + "...");
         
-        httpClient = ClientBuilder.newClient();
+        eurekaHandler = new EurekaHandler();
+        httpHelper = new HttpHelper(eurekaHandler);
+        indexingServiceHelper = new IndexingServiceHelper(httpHelper, eurekaHandler);
 
         if (!eurekaHandler.initEureka()) {
             logger.error("Failed to initialize Eureka client");
@@ -128,7 +106,6 @@ public class Delegate implements ServletContextListener {
     
     /***********************************   Servlet Context - END   ***********************************/
     
-    
     @GET
     @Path("/")
     public Response hello() {
@@ -138,6 +115,14 @@ public class Delegate implements ServletContextListener {
         			   .build();
     }
     
+    @GET
+    @Path("eureka")
+    @Produces({ MediaType.APPLICATION_JSON })
+    // Return the Delegate services registered in Eureka server (Used for debug)
+    public Response eureka() {
+        List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
+        return Response.status(Response.Status.OK).entity(endpointList).build();
+    }
     
     /***********************************   indexing-service/item/fields   ***********************************/
     
@@ -151,8 +136,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getItemFieldsLocalPath, queryParams);
-    	List<Map<String, Object>> aggregatedResults = mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingServiceHelper.getItemFieldsLocalPath, queryParams);
+    	List<Map<String, Object>> aggregatedResults = indexingServiceHelper.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -168,10 +153,10 @@ public class Delegate implements ServletContextListener {
     public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getItemFieldsPath, queryParams);
-        logger.info("got a request to endpoint " + getItemFieldsLocalPath + ", forwarding to " + uri.toString());
+        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getItemFieldsPath, queryParams);
+        logger.info("got a request to endpoint " + IndexingServiceHelper.getItemFieldsLocalPath + ", forwarding to " + uri.toString());
         
-        Response response = httpClient.target(uri.toString()).request().get();
+        Response response = httpHelper.sendGetRequest(uri);
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
             return Response.status(Status.OK)
@@ -200,8 +185,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = sendGetRequestToAllServices(getPartyFieldsLocalPath, queryParams);
-    	List<Map<String, Object>> aggregatedResults = mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingServiceHelper.getPartyFieldsLocalPath, queryParams);
+    	List<Map<String, Object>> aggregatedResults = indexingServiceHelper.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -217,10 +202,10 @@ public class Delegate implements ServletContextListener {
     public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+getPartyFieldsPath, queryParams);
-        logger.info("got a request to endpoint " + getPartyFieldsLocalPath + ", forwarding to " + uri.toString());
+        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getPartyFieldsPath, queryParams);
+        logger.info("got a request to endpoint " + IndexingServiceHelper.getPartyFieldsLocalPath + ", forwarding to " + uri.toString());
         
-        Response response = httpClient.target(uri.toString()).request().get();
+        Response response = httpHelper.sendGetRequest(uri);
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
         	String data = response.readEntity(String.class);
             return Response.status(Status.OK)
@@ -251,69 +236,16 @@ public class Delegate implements ServletContextListener {
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
     																			Integer.parseInt(body.get("start").toString())); 
-    	HashMap<ServiceEndpoint, String> resultList = getPostItemSearchAggregatedResults(body);
+    	HashMap<ServiceEndpoint, String> resultList = indexingServiceHelper.getPostItemSearchAggregatedResults(body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
     		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(eurekaHandler.getId()));
     	}
-    	
     	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
     								   .entity(indexingServiceResult.getFinalResult())
     								   .build();
-    }
-    
-    @SuppressWarnings("unchecked")
-	private HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
-    	int requestedPageSize = Integer.parseInt(body.get("rows").toString()); // save it before manipulating
-    	// manipulate body in order to get results from all delegates.
-    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
-    	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
-    	HashMap<ServiceEndpoint, String> dummyResultList = sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
-    	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
-    	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
-    		String result = dummyResultList.get(endpoint);
-    		if (result == null || result.isEmpty()) {
-    			endpointsToRemove.add(endpoint);
-    		}
-    	}
-    	for (ServiceEndpoint endpoint : endpointsToRemove) {
-    		dummyResultList.remove(endpoint);
-    		endpointList.remove(endpoint);
-    	}
-    	
-    	int sumTotalElements = 0;
-    	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
-    	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
-    		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
-    		int totalElementForEndpoint = Integer.parseInt(json.get("totalElements").toString());
-    		totalElementPerEndpoint.put(entry.getKey(), totalElementForEndpoint);
-    		sumTotalElements += totalElementForEndpoint;
-    	}
-    	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0 || endpointList.size()==1) {
-    		body.put("rows", requestedPageSize); 
-    		return sendPostRequestToAllServices(endpointList, postItemSearchLocalPath, body);
-    	}
-    	// else, we need to decide how many results we want from each delegate
-    	// TODO work on this logic!
-    	logger.info("we need to decide how many results to get from each delegate");
-    	logger.info("sum of total elements = " + sumTotalElements);
-    	int numOfRowsAggregated = 0;
-    	HashMap<ServiceEndpoint, String> aggregatedResults = new LinkedHashMap<ServiceEndpoint, String>();
-    	for (ServiceEndpoint endpoint : endpointList) {
-    		int totalElementOfEndpoint = totalElementPerEndpoint.get(endpoint);
-    		logger.info("totalElements of endpoint + " + endpoint.getHostName() + ":" + endpoint.getPort()+ " = " + totalElementOfEndpoint);
-    		int endpointRows = Math.min(Math.round(totalElementOfEndpoint/((float)sumTotalElements)*requestedPageSize),(requestedPageSize-numOfRowsAggregated));
-    		List<ServiceEndpoint> listForRequest = new LinkedList<ServiceEndpoint>();
-    		listForRequest.add(endpoint);
-    		body.put("rows", endpointRows); // manipulate body values
-    		logger.info("requesting from endpoint " + endpointRows + " rows, body = " + body);
-    		aggregatedResults.putAll(sendPostRequestToAllServices(listForRequest, postItemSearchLocalPath, body));
-    		numOfRowsAggregated += endpointRows;
-    	}
-    	
-    	return aggregatedResults;
     }
     
     // a REST call that should be used between delegates. 
@@ -324,19 +256,19 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search/local")
     public Response postItemSearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce(indexingServicePathPrefix+getItemFieldsPath);
-    	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = indexingServiceHelper.getLocalFieldNamesFromIndexingSerivce(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getItemFieldsPath);
+    	if (indexingServiceHelper.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	indexingServiceHelper.removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-        URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+postItemSearchPath, null);
+        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.postItemSearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return forwardPostRequest(postItemSearchLocalPath, uri.toString(), body, headers);
+        return httpHelper.forwardPostRequest(IndexingServiceHelper.postItemSearchLocalPath, uri.toString(), body, headers, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -364,7 +296,7 @@ public class Delegate implements ServletContextListener {
     		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 0);
     	}
     	
-    	HashMap<ServiceEndpoint, String> resultList = sendPostRequestToAllServices(endpointList, postPartySearchLocalPath, body);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingServiceHelper.postPartySearchLocalPath, body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
@@ -385,251 +317,20 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search/local")
     public Response postPartySearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = getLocalFieldNamesFromIndexingSerivce(indexingServicePathPrefix+getPartyFieldsPath);
-    	if (fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = indexingServiceHelper.getLocalFieldNamesFromIndexingSerivce(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getPartyFieldsPath);
+    	if (indexingServiceHelper.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	indexingServiceHelper.removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+postPartySearchPath, null);
+    	URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.postPartySearchPath, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return forwardPostRequest(postPartySearchLocalPath, uri.toString(), body, headers);
+        return httpHelper.forwardPostRequest(IndexingServiceHelper.postPartySearchLocalPath, uri.toString(), body, headers, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
-    
-    
-    /***********************************   indexing-service extra logic   ***********************************/
-    
-    // if field name exists in more than one instance, putting the entry just once, ignoring doc count field
-    private List<Map<String, Object>> mergeGetResponsesByFieldName(HashMap<ServiceEndpoint, String> resultList) {
-    	logger.info("merging results of GET request based on field name");
-    	List<Map<String, Object>> aggregatedResults = new LinkedList<Map<String, Object>>();
-    	
-    	for (String results : resultList.values()) {
-    		if (results == null || results.isEmpty()) {
-				continue;
-			}
-    		List<Map<String, Object>> json;
-			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-				for (int i=0; i<json.size(); ++i) {
-					Map<String, Object> jsonObject = json.get(i);
-					String key = jsonObject.get("fieldName").toString();
-					if (!containsFieldName(aggregatedResults, key)) {
-						aggregatedResults.add(jsonObject);
-					}
-					else {
-						logger.info("field name = " + key + " already exist, skipping");
-					}
-				}
-			} catch (IOException e) {
-				logger.warn("failed to read response json " + e.getMessage());
-			}
-    	}
-    	return aggregatedResults;
-    }
-    
-	private boolean containsFieldName(List<Map<String, Object>> aggregatedResults, String fieldName) {
-    	for (Map<String, Object> jsonObject : aggregatedResults) {
-    		String key = jsonObject.get("fieldName").toString();
-    		if (key.equals(fieldName)) {
-    			return true;
-    		}
-    	}
-    	return false;
-    }
-    
-    private Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceRelativePath) {
-    	URI uri = buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServiceRelativePath, null);
-        logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
-        
-        Response response = httpClient.target(uri.toString()).request().get();
-        if (response.getStatus() >= 400) { // we had an issue, we can't modify the body without any response
-       	 logger.warn("get error when calling GET '/item/fields' in indexing service");
-       	 return new HashSet<String>();
-        }
-        
-        String data = response.readEntity(String.class);
-        Set<String> localFieldNames = new HashSet<String>();
-		try {
-			List<Map<String, Object>> json = mapper.readValue(data, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-			for (int i=0; i<json.size(); ++i) {
-				Map<String, Object> jsonObject = json.get(i);
-				String fieldName = jsonObject.get("fieldName").toString();
-				localFieldNames.add(fieldName);
-			}
-		}
-		catch (Exception ex) {
-			logger.warn("get error while processing GET '/item/fields' response from indexing service...");
-		}
-		return localFieldNames;
-    }
-    
-	private boolean fqListContainNonLocalFieldName(Map<String, Object> body, Set<String> localFieldNames) {
-    	if (body.get("fq") == null) {
-			return false; 
-		}
-    	try {
-    		String fqStr = body.get("fq").toString();
-    		fqStr = fqStr.substring(1, fqStr.length()-1).trim();
-    		String[] fqList = fqStr.split(",");
-    		for (String fq : fqList) {
-    			fq = fq.trim();
-    			String fqFieldName = fq.split(":")[0];
-    			logger.info("checking fq: " + fq + ", fq fieldName = " + fqFieldName);
-    			if (fqFieldName != null && !localFieldNames.contains(fqFieldName)) {
-    				logger.info("fq field name " + fqFieldName + " doesn't exist in local instance, returns empty result");
-    				return true;
-    			}
-    		}
-    	}
-    	catch (Exception ex) {
-    		logger.warn("error while trying to cast fq field to json");
-    	}
-    	return false;
-    }
-    
-    // remove from body.facet.fields all field names that doesn't exist in the local indexing service instance
-    private void removeNonExistingFieldNamesFromBody(Map<String, Object> body, Set<String> localFieldNames) {
-    	if (body.get("facet") == null) {
-    		return;
-    	}
-    	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
-    	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
-    	
-    	List<String> facetFieldNewValue = new LinkedList<String>();
-    	
-    	for (JsonElement element : fieldJsonObject) {
-    		String fieldName = element.getAsString();
-    		if (fieldName != null && localFieldNames.contains(fieldName)) {
-    			facetFieldNewValue.add(fieldName);
-    		}
-    	}
-    	Map<String, Object> facetField = new HashMap<String, Object>();
-    	facetField.put("field", facetFieldNewValue);
-    	facetField.put("minCount", facetJsonObject.get("minCount").getAsInt());
-    	facetField.put("limit", facetJsonObject.get("limit").getAsInt());
-    	body.put("facet", facetField);
-    }
-    
-    /***********************************   indexing-service extra logic - END   ***********************************/
-    
-    
-    /***********************************   Http Requests   ***********************************/
-    
-    private URI buildUri(String host, int port, String path, HashMap<String, List<String>> queryParams) {
-    	// Prepare the destination URL for the request
-        UriBuilder uriBuilder = UriBuilder.fromUri("");
-        uriBuilder.scheme("http");
-        if (queryParams != null) {
-        	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
-        		if (queryParam.getValue() != null && !queryParam.getValue().isEmpty()) {
-        			uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
-        		}
-        	}
-        }
-        uriBuilder.host(host).path(path);
-        if (port > 0) { // in case the request is sent to nginx, no port is needed (will be set to -1)
-        	uriBuilder.port(port);
-        }
-        return uriBuilder.build();
-    }
-    
-    // forward post request
-    private Response forwardPostRequest(String from, String to, Map<String, Object> body, MultivaluedMap<String, Object> headers) {
-    	logger.info("got a request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
-        
-        Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
-        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
-        	String data = response.readEntity(String.class);
-            return Response.status(Status.OK)
-            				.entity(data)
-            				.type(MediaType.APPLICATION_JSON)
-            				.header("frontendServiceUrl", frontendServiceUrl)
-            				.build();
-        }
-        else {
-        	return response;
-        }
-    }
-    
-    // Sends the get request to all the Delegate services which are registered in the Eureka server
-    private HashMap<ServiceEndpoint, String> sendGetRequestToAllServices(String urlPath, HashMap<String, List<String>> queryParams) {
-    	logger.info("send get requests to all delegates");
-    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
-        List<Future<Response>> futureList = new ArrayList<Future<Response>>();
-
-        for (ServiceEndpoint endpoint : endpointList) {
-            // Prepare the destination URL
-            UriBuilder uriBuilder = UriBuilder.fromUri("");
-            uriBuilder.scheme("http");
-            // add all query params to the request
-            for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
-            	for (String paramValue : queryParam.getValue()) {
-            		uriBuilder.queryParam(queryParam.getKey(), paramValue);
-            	}
-            }
-            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
-            
-            logger.info("sending the request to " + endpoint.toString() + "...");
-            Future<Response> result = httpClient.target(uri.toString()).request().async().get();
-            futureList.add(result);
-        }
-        return getResponseListFromAllDelegates(endpointList, futureList);
-    }
-    
-    // Sends the post request to all the Delegate services which are registered in the Eureka server
-    private HashMap<ServiceEndpoint, String> sendPostRequestToAllServices(List<ServiceEndpoint> endpointList, String urlPath, Map<String, Object> body) {
-    	logger.info("send post requests to all delegates");
-        List<Future<Response>> futureList = new ArrayList<Future<Response>>();
-
-        for (ServiceEndpoint endpoint : endpointList) {
-            URI uri = buildUri(endpoint.getHostName(), endpoint.getPort(), urlPath, null);
-            logger.info("sending the request to " + endpoint.toString() + "...");
-            Future<Response> result = httpClient.target(uri.toString()).request().async().post(Entity.json(body));
-            futureList.add(result);
-        }
-        return getResponseListFromAllDelegates(endpointList, futureList);
-    }
-    
-    // get responses from all Delegate services which are registered in the Eureka server
-    private HashMap<ServiceEndpoint, String> getResponseListFromAllDelegates(List<ServiceEndpoint> endpointList, List<Future<Response>> futureList) {
-        // Wait (one by one) for the responses from all the services
-        HashMap<ServiceEndpoint, String> resList = new HashMap<ServiceEndpoint, String>();
-        for(int i = 0; i< futureList.size(); i++) {
-            Future<Response> response = futureList.get(i);
-            ServiceEndpoint endpoint = endpointList.get(i);
-            logger.info("got response from " + endpoint.toString());
-            try {
-            	Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
-                String data = res.readEntity(String.class);
-                endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
-                resList.put(endpoint, data);
-            } catch(Exception e) {
-                logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +
-                			" appName:" + endpoint.getAppName() +
-                            " (" + endpoint.getHostName() +
-                            ":" + endpoint.getPort() + ") - " +
-                            e.getMessage());
-            }
-        }
-        logger.info("aggregated results: \n" + resList.toString());
-        return resList;
-    }
-    
-    /***********************************   Http Requests - END   ***********************************/
-    
-    @GET
-    @Path("eureka")
-    @Produces({ MediaType.APPLICATION_JSON })
-    // Return the Delegate services registered in Eureka server (Used for debug)
-    public Response eureka() {
-        List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
-        return Response.status(Response.Status.OK).entity(endpointList).build();
-    }
 }

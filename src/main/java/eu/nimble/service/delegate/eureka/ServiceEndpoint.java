@@ -1,4 +1,4 @@
-package eu.nimble.service.delegate;
+package eu.nimble.service.delegate.eureka;
 
 /**
  * ServiceEndpoint information.
