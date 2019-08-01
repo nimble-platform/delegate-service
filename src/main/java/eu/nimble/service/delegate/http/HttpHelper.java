@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -60,9 +61,32 @@ public class HttpHelper {
         return uriBuilder.build();
     }
     
+    // forward get request
+    public Response forwardGetRequest(String from, String to, MultivaluedMap<String, Object> headers, String frontendServiceUrlToPutInResponse) {
+    	logger.info("got a GET request to endpoint " + from + ", forwarding it to " + to);
+        
+    	Builder builder = httpClient.target(to).request();
+    	if (headers != null) {
+    		builder.headers(headers);
+    	}
+    	Response response = builder.get();
+    	
+        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
+        	String data = response.readEntity(String.class);
+            return Response.status(Status.OK)
+            				.entity(data)
+            				.type(MediaType.APPLICATION_JSON)
+            				.header("frontendServiceUrl", frontendServiceUrlToPutInResponse)
+            				.build();
+        }
+        else {
+        	return response;
+        }
+    }
+    
     // forward post request
     public Response forwardPostRequest(String from, String to, Map<String, Object> body, MultivaluedMap<String, Object> headers, String frontendServiceUrlToPutInResponse) {
-    	logger.info("got a request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
+    	logger.info("got a POST request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
         
         Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
@@ -78,8 +102,12 @@ public class HttpHelper {
         }
     }
     
-    public Response sendGetRequest(URI uri) {
-    	return httpClient.target(uri.toString()).request().get();
+    public Response sendGetRequest(URI uri, MultivaluedMap<String, Object> headers) {
+    	Builder builder = httpClient.target(uri.toString()).request();
+    	if (headers != null) {
+    		builder.headers(headers);
+    	}
+    	return builder.get();
     }
     
     // Sends the get request to all the Delegate services which are registered in the Eureka server

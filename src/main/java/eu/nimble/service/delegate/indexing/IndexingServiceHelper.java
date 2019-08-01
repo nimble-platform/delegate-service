@@ -137,7 +137,7 @@ public class IndexingServiceHelper {
     	return aggregatedResults;
     }
     
-	public boolean containsFieldName(List<Map<String, Object>> aggregatedResults, String fieldName) {
+	private boolean containsFieldName(List<Map<String, Object>> aggregatedResults, String fieldName) {
     	for (Map<String, Object> jsonObject : aggregatedResults) {
     		String key = jsonObject.get("fieldName").toString();
     		if (key.equals(fieldName)) {
@@ -151,10 +151,10 @@ public class IndexingServiceHelper {
     	URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServiceRelativePath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
-        Response response = httpHelper.sendGetRequest(uri);
+        Response response = httpHelper.sendGetRequest(uri, null);
         if (response.getStatus() >= 400) { // we had an issue, we can't modify the body without any response
-       	 logger.warn("get error when calling GET '/item/fields' in indexing service");
-       	 return new HashSet<String>();
+        	logger.warn("get error when calling GET '/item/fields' in indexing service");
+        	return new HashSet<String>();
         }
         
         String data = response.readEntity(String.class);

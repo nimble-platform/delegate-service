@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import eu.nimble.service.delegate.eureka.EurekaHandler;
 import eu.nimble.service.delegate.eureka.ServiceEndpoint;
 import eu.nimble.service.delegate.http.HttpHelper;
+import eu.nimble.service.delegate.identity.IdentityServiceHelper;
 import eu.nimble.service.delegate.indexing.IndexingServiceHelper;
 import eu.nimble.service.delegate.indexing.IndexingServiceResult;
 
@@ -50,11 +51,17 @@ public class Delegate implements ServletContextListener {
     private static EurekaHandler eurekaHandler;
     private static HttpHelper httpHelper;
     private static IndexingServiceHelper indexingServiceHelper;
+    private static IdentityServiceHelper identityServiceHelper;
     
+    //frontend service
     private static String frontendServiceUrl;
+    // indexing service
     private static String indexingServiceBaseUrl;
-    private static String indexingServicePathPrefix;
     private static int indexingServicePort;
+    private static String indexingServicePathPrefix;
+    // identity service
+    
+    // catalog service
     
     /***********************************   Servlet Context   ***********************************/
     
@@ -88,13 +95,15 @@ public class Delegate implements ServletContextListener {
         											+ ", indexing service port = " + indexingServicePort + "...");
         
         eurekaHandler = new EurekaHandler();
-        httpHelper = new HttpHelper(eurekaHandler);
-        indexingServiceHelper = new IndexingServiceHelper(httpHelper, eurekaHandler);
-
         if (!eurekaHandler.initEureka()) {
             logger.error("Failed to initialize Eureka client");
             return;
         }
+        
+        httpHelper = new HttpHelper(eurekaHandler);
+        indexingServiceHelper = new IndexingServiceHelper(httpHelper, eurekaHandler);
+        identityServiceHelper = new IdentityServiceHelper(httpHelper);
+        
         logger.info("Delegate service has been initialized");
     }
 
@@ -154,20 +163,8 @@ public class Delegate implements ServletContextListener {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
         URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getItemFieldsPath, queryParams);
-        logger.info("got a request to endpoint " + IndexingServiceHelper.getItemFieldsLocalPath + ", forwarding to " + uri.toString());
         
-        Response response = httpHelper.sendGetRequest(uri);
-        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
-        	String data = response.readEntity(String.class);
-            return Response.status(Status.OK)
-            			   .entity(data)
-            			   .type(MediaType.APPLICATION_JSON)
-            			   .header("frontendServiceUrl", frontendServiceUrl)
-            			   .build();
-        }
-        else {
-        	return response;
-        }
+        return httpHelper.forwardGetRequest(IndexingServiceHelper.getItemFieldsLocalPath, uri.toString(), null, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/fields - END   ***********************************/
@@ -203,20 +200,8 @@ public class Delegate implements ServletContextListener {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
         URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getPartyFieldsPath, queryParams);
-        logger.info("got a request to endpoint " + IndexingServiceHelper.getPartyFieldsLocalPath + ", forwarding to " + uri.toString());
         
-        Response response = httpHelper.sendGetRequest(uri);
-        if (response.getStatus() >= 200 && response.getStatus() <= 300) {
-        	String data = response.readEntity(String.class);
-            return Response.status(Status.OK)
-            			   .entity(data)
-            			   .type(MediaType.APPLICATION_JSON)
-            			   .header("frontendServiceUrl", frontendServiceUrl)
-            			   .build();
-        }
-        else {
-        	return response;
-        }
+        return httpHelper.forwardGetRequest(IndexingServiceHelper.getPartyFieldsLocalPath, uri.toString(), null, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/fields - END   ***********************************/
