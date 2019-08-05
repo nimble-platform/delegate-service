@@ -26,7 +26,7 @@ import eu.nimble.service.delegate.eureka.EurekaHandler;
 import eu.nimble.service.delegate.eureka.ServiceEndpoint;
 
 /**
- * Indexing Service Result
+ * Http calls handler
  *
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 07/30/2019.
  */

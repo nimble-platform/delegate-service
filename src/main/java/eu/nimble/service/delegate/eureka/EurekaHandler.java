@@ -15,7 +15,7 @@ import com.netflix.discovery.DiscoveryClient;
 import com.netflix.discovery.EurekaClient;
 
 /**
- * Indexing Service Result
+ * Eureka Handler
  *
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 07/30/2019.
  */

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import eu.nimble.service.delegate.catalog.CatalogHandler;
 import eu.nimble.service.delegate.eureka.EurekaHandler;
 import eu.nimble.service.delegate.eureka.ServiceEndpoint;
 import eu.nimble.service.delegate.http.HttpHelper;

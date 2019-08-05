@@ -1,7 +1,7 @@
 package eu.nimble.service.delegate.eureka;
 
 /**
- * ServiceEndpoint information.
+ * Eureka Service Endpoint information
  *
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 04/06/2019.
  */
