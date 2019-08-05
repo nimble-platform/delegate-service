@@ -2,6 +2,7 @@ package eu.nimble.service.delegate.indexing;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -33,36 +34,68 @@ import eu.nimble.service.delegate.http.HttpHelper;
  *
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 07/30/2019.
  */
-public class IndexingServiceHelper {
-	private static Logger logger = LogManager.getLogger(IndexingServiceHelper.class);
+public class IndexingHandler {
+	private static Logger logger = LogManager.getLogger(IndexingHandler.class);
     
-    public static String getItemFieldsPath = "/item/fields";
-    public static String getItemFieldsLocalPath = "/item/fields/local";
-    public static String getPartyFieldsPath = "/party/fields";
-    public static String getPartyFieldsLocalPath = "/party/fields/local";
-    public static String postItemSearchPath = "/item/search";
-    public static String postItemSearchLocalPath = "/item/search/local";
-    public static String postPartySearchPath = "/party/search";
-    public static String postPartySearchLocalPath = "/party/search/local";
+    private static String INDEXING_SERVICE_URL = "INDEXING_SERVICE_BASE_URL";
+    private static String INDEXING_SERVICE_PORT = "INDEXING_SERVICE_PORT";
+	
+    public static String GET_ITEM_FIELDS_PATH = "/item/fields";
+    public static String GET_ITEM_FIELDS_LOCAL_PATH = "/item/fields/local";
+    public static String GET_PARTY_FIELDS_PATH = "/party/fields";
+    public static String GET_PARTY_FIELDS_LOCAL_PATH = "/party/fields/local";
+    public static String POST_ITEM_SEARCH_PATH = "/item/search";
+    public static String POST_ITEM_SEARCH_LOCAL_PATH = "/item/search/local";
+    public static String POST_PARTY_SEARCH_PATH = "/party/search";
+    public static String POST_PARTY_SEARCH_LOCAL_PATH = "/party/search/local";
     
-    private EurekaHandler eurekaHandler;
-    private HttpHelper httpHelper;
+    public static String BaseUrl;
+    public static int Port;
+    public static String PathPrefix;
     
-    private static ObjectMapper mapper = new ObjectMapper();
-    private static JsonParser jsonParser = new JsonParser();
+    private EurekaHandler _eurekaHandler;
+    private HttpHelper _httpHelper;
+    private static ObjectMapper _mapper = new ObjectMapper();
+    private static JsonParser _jsonParser = new JsonParser();
     
-    public IndexingServiceHelper(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
-    	this.httpHelper = httpHelper;
-    	this.eurekaHandler = eurekaHandler;
+    public IndexingHandler(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
+    	try {
+	    	BaseUrl = System.getenv(INDEXING_SERVICE_URL);
+			try {
+				Port = Integer.parseInt(System.getenv(INDEXING_SERVICE_PORT));
+			}
+			catch (Exception ex) {
+				Port = -1;
+			}
+			String[] serviceUrlParts = BaseUrl.split("/");
+			if (serviceUrlParts.length > 1) {
+				BaseUrl = serviceUrlParts[0];
+				PathPrefix = "/"+String.join("/", Arrays.copyOfRange(serviceUrlParts, 1, serviceUrlParts.length));
+			}
+			else {
+				PathPrefix = "";
+			}
+    	}
+		catch (Exception ex) {
+    		logger.error("service env vars are not set as expected");
+    	}
+    	
+    	this._httpHelper = httpHelper;
+    	this._eurekaHandler = eurekaHandler;
+    	
+    	logger.info("Indexing Service Handler is being initialized with" 
+				+ "indexing service base url = " + BaseUrl
+				+ ", indexing service prefix = " + PathPrefix 
+				+ ", indexing service port = " + Port + "...");
     }
     
     @SuppressWarnings("unchecked")
   	public HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
       	int requestedPageSize = Integer.parseInt(body.get("rows").toString()); // save it before manipulating
       	// manipulate body in order to get results from all delegates.
-      	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
+      	List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
       	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
-      	HashMap<ServiceEndpoint, String> dummyResultList = httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingServiceHelper.postItemSearchLocalPath, body);
+      	HashMap<ServiceEndpoint, String> dummyResultList = _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, body);
       	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
       	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
       		String result = dummyResultList.get(endpoint);
@@ -78,14 +111,14 @@ public class IndexingServiceHelper {
       	int sumTotalElements = 0;
       	final LinkedHashMap<ServiceEndpoint, Integer> totalElementPerEndpoint = new LinkedHashMap<ServiceEndpoint, Integer>();
       	for (Entry<ServiceEndpoint, String> entry : dummyResultList.entrySet()) {
-      		Map<String, Object> json = mapper.readValue(entry.getValue(), Map.class);
+      		Map<String, Object> json = _mapper.readValue(entry.getValue(), Map.class);
       		int totalElementForEndpoint = Integer.parseInt(json.get("totalElements").toString());
       		totalElementPerEndpoint.put(entry.getKey(), totalElementForEndpoint);
       		sumTotalElements += totalElementForEndpoint;
       	}
       	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0 || endpointList.size()==1) {
       		body.put("rows", requestedPageSize); 
-      		return httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingServiceHelper.postItemSearchLocalPath, body);
+      		return _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, body);
       	}
       	// else, we need to decide how many results we want from each delegate
       	// TODO work on this logic!
@@ -101,7 +134,7 @@ public class IndexingServiceHelper {
       		listForRequest.add(endpoint);
       		body.put("rows", endpointRows); // manipulate body values
       		logger.info("requesting from endpoint " + endpointRows + " rows, body = " + body);
-      		aggregatedResults.putAll(httpHelper.sendPostRequestToAllDelegates(listForRequest, IndexingServiceHelper.postItemSearchLocalPath, body));
+      		aggregatedResults.putAll(_httpHelper.sendPostRequestToAllDelegates(listForRequest, POST_ITEM_SEARCH_LOCAL_PATH, body));
       		numOfRowsAggregated += endpointRows;
       	}
       	
@@ -119,7 +152,7 @@ public class IndexingServiceHelper {
 			}
     		List<Map<String, Object>> json;
 			try {
-				json = mapper.readValue(results, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+				json = _mapper.readValue(results, _mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 				for (int i=0; i<json.size(); ++i) {
 					Map<String, Object> jsonObject = json.get(i);
 					String key = jsonObject.get("fieldName").toString();
@@ -147,11 +180,11 @@ public class IndexingServiceHelper {
     	return false;
     }
     
-    public Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceBaseUrl,int indexingServicePort, String indexingServiceRelativePath) {
-    	URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServiceRelativePath, null);
+    public Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceRelativePath) {
+    	URI uri = _httpHelper.buildUri(BaseUrl, Port, indexingServiceRelativePath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
         
-        Response response = httpHelper.sendGetRequest(uri, null);
+        Response response = _httpHelper.sendGetRequest(uri, null);
         if (response.getStatus() >= 400) { // we had an issue, we can't modify the body without any response
         	logger.warn("get error when calling GET '/item/fields' in indexing service");
         	return new HashSet<String>();
@@ -160,7 +193,7 @@ public class IndexingServiceHelper {
         String data = response.readEntity(String.class);
         Set<String> localFieldNames = new HashSet<String>();
 		try {
-			List<Map<String, Object>> json = mapper.readValue(data, mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+			List<Map<String, Object>> json = _mapper.readValue(data, _mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 			for (int i=0; i<json.size(); ++i) {
 				Map<String, Object> jsonObject = json.get(i);
 				String fieldName = jsonObject.get("fieldName").toString();
@@ -202,7 +235,7 @@ public class IndexingServiceHelper {
     	if (body.get("facet") == null) {
     		return;
     	}
-    	JsonObject facetJsonObject = jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
+    	JsonObject facetJsonObject = _jsonParser.parse(body.get("facet").toString()).getAsJsonObject();
     	JsonArray fieldJsonObject = facetJsonObject.get("field").getAsJsonArray();
     	
     	List<String> facetFieldNewValue = new LinkedList<String>();

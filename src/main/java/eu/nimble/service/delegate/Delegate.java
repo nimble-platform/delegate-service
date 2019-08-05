@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import eu.nimble.service.delegate.eureka.EurekaHandler;
 import eu.nimble.service.delegate.eureka.ServiceEndpoint;
 import eu.nimble.service.delegate.http.HttpHelper;
-import eu.nimble.service.delegate.identity.IdentityServiceHelper;
-import eu.nimble.service.delegate.indexing.IndexingServiceHelper;
+import eu.nimble.service.delegate.identity.IdentityHandler;
+import eu.nimble.service.delegate.indexing.IndexingHandler;
 import eu.nimble.service.delegate.indexing.IndexingServiceResult;
 
 import javax.ws.rs.ApplicationPath;
@@ -30,7 +30,6 @@ import javax.ws.rs.core.Response;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletContextEvent;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,51 +47,27 @@ import java.net.URI;
 public class Delegate implements ServletContextListener {
     private static Logger logger = LogManager.getLogger(Delegate.class);
 
+    private static String FRONTEND_URL = "FRONTEND_URL";
+    private static String frontendServiceUrl;
+    
     private static EurekaHandler eurekaHandler;
     private static HttpHelper httpHelper;
-    private static IndexingServiceHelper indexingServiceHelper;
-    private static IdentityServiceHelper identityServiceHelper;
     
-    //frontend service
-    private static String frontendServiceUrl;
-    // indexing service
-    private static String indexingServiceBaseUrl;
-    private static int indexingServicePort;
-    private static String indexingServicePathPrefix;
-    // identity service
-    
-    // catalog service
-    
+    private static IndexingHandler indexingHandler;
+    private static IdentityHandler identityHandler;
     /***********************************   Servlet Context   ***********************************/
     
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-    		frontendServiceUrl = System.getenv("FRONTEND_URL");
-    		indexingServiceBaseUrl = System.getenv("INDEXING_SERVICE_URL");
-    		try {
-    			indexingServicePort = Integer.parseInt(System.getenv("INDEXING_SERVICE_PORT"));
-    		}
-    		catch (Exception ex) {
-    			indexingServicePort = -1;
-    		}
-    		String[] indexingServiceUrlParts = indexingServiceBaseUrl.split("/");
-    		if (indexingServiceUrlParts.length > 1) {
-    			indexingServiceBaseUrl = indexingServiceUrlParts[0];
-    			indexingServicePathPrefix = "/"+String.join("/", Arrays.copyOfRange(indexingServiceUrlParts, 1, indexingServiceUrlParts.length));
-    		}
-    		else {
-    			indexingServicePathPrefix = "";
-    		}
+    		// frontend service
+    		frontendServiceUrl = System.getenv(FRONTEND_URL);
     	}
     	catch (Exception ex) {
-    		logger.warn("env vars are not set as expected");
+    		logger.error("service env vars are not set as expected");
     	}
     	
-        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl 
-        											+ ", indexing service base url = " + indexingServiceBaseUrl 
-        											+ ", indexing service prefix = " + indexingServicePathPrefix 
-        											+ ", indexing service port = " + indexingServicePort + "...");
+        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl);
         
         eurekaHandler = new EurekaHandler();
         if (!eurekaHandler.initEureka()) {
@@ -101,8 +76,8 @@ public class Delegate implements ServletContextListener {
         }
         
         httpHelper = new HttpHelper(eurekaHandler);
-        indexingServiceHelper = new IndexingServiceHelper(httpHelper, eurekaHandler);
-        identityServiceHelper = new IdentityServiceHelper(httpHelper);
+        indexingHandler = new IndexingHandler(httpHelper, eurekaHandler);
+        identityHandler = new IdentityHandler(httpHelper);
         
         logger.info("Delegate service has been initialized");
     }
@@ -145,8 +120,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingServiceHelper.getItemFieldsLocalPath, queryParams);
-    	List<Map<String, Object>> aggregatedResults = indexingServiceHelper.mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, queryParams);
+    	List<Map<String, Object>> aggregatedResults = indexingHandler.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -162,9 +137,9 @@ public class Delegate implements ServletContextListener {
     public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getItemFieldsPath, queryParams);
+        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH, queryParams);
         
-        return httpHelper.forwardGetRequest(IndexingServiceHelper.getItemFieldsLocalPath, uri.toString(), null, frontendServiceUrl);
+        return httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), null, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/fields - END   ***********************************/
@@ -182,8 +157,8 @@ public class Delegate implements ServletContextListener {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingServiceHelper.getPartyFieldsLocalPath, queryParams);
-    	List<Map<String, Object>> aggregatedResults = indexingServiceHelper.mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, queryParams);
+    	List<Map<String, Object>> aggregatedResults = indexingHandler.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -199,9 +174,9 @@ public class Delegate implements ServletContextListener {
     public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getPartyFieldsPath, queryParams);
+        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH, queryParams);
         
-        return httpHelper.forwardGetRequest(IndexingServiceHelper.getPartyFieldsLocalPath, uri.toString(), null, frontendServiceUrl);
+        return httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), null, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/fields - END   ***********************************/
@@ -221,7 +196,7 @@ public class Delegate implements ServletContextListener {
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
     																			Integer.parseInt(body.get("start").toString())); 
-    	HashMap<ServiceEndpoint, String> resultList = indexingServiceHelper.getPostItemSearchAggregatedResults(body);
+    	HashMap<ServiceEndpoint, String> resultList = indexingHandler.getPostItemSearchAggregatedResults(body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
@@ -241,19 +216,19 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search/local")
     public Response postItemSearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = indexingServiceHelper.getLocalFieldNamesFromIndexingSerivce(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getItemFieldsPath);
-    	if (indexingServiceHelper.fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH);
+    	if (indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	indexingServiceHelper.removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-        URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.postItemSearchPath, null);
+        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return httpHelper.forwardPostRequest(IndexingServiceHelper.postItemSearchLocalPath, uri.toString(), body, headers, frontendServiceUrl);
+        return httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headers, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -281,7 +256,7 @@ public class Delegate implements ServletContextListener {
     		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 0);
     	}
     	
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingServiceHelper.postPartySearchLocalPath, body);
+    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
@@ -302,19 +277,19 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search/local")
     public Response postPartySearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = indexingServiceHelper.getLocalFieldNamesFromIndexingSerivce(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.getPartyFieldsPath);
-    	if (indexingServiceHelper.fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH);
+    	if (indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	indexingServiceHelper.removeNonExistingFieldNamesFromBody(body, localFieldNames);
-    	
-    	URI uri = httpHelper.buildUri(indexingServiceBaseUrl, indexingServicePort, indexingServicePathPrefix+IndexingServiceHelper.postPartySearchPath, null);
+    	indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	 
+    	URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_PARTY_SEARCH_PATH, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return httpHelper.forwardPostRequest(IndexingServiceHelper.postPartySearchLocalPath, uri.toString(), body, headers, frontendServiceUrl);
+        return httpHelper.forwardPostRequest(IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, uri.toString(), body, headers, frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
