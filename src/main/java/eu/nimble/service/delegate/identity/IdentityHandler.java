@@ -12,11 +12,16 @@ import org.apache.logging.log4j.Logger;
 
 import eu.nimble.service.delegate.http.HttpHelper;
 
+/**
+ * Identity Service Handler
+ *
+ * Created by Nir Rozenbaum (nirro@il.ibm.com) 08/05/2019.
+ */
 public class IdentityHandler {
 	private static Logger logger = LogManager.getLogger(IdentityHandler.class);
 	
-    private static String IDENTITY_SERVICE_URL = "IDENTITY_SERVICE_BASE_URL";
-    private static String IDENTITY_SERVICE_PORT = "IDENTITY_SERVICE_PORT";
+    private static String SERVICE_URL = "IDENTITY_SERVICE_BASE_URL";
+    private static String SERVICE_PORT = "IDENTITY_SERVICE_PORT";
 	
 	public static String GET_USER_INFO_PATH = "/user-info";
 	
@@ -28,9 +33,9 @@ public class IdentityHandler {
 	
 	public IdentityHandler(HttpHelper httpHelper) {
 		try {
-			BaseUrl = System.getenv(IDENTITY_SERVICE_URL);
+			BaseUrl = System.getenv(SERVICE_URL);
 			try {
-				Port = Integer.parseInt(System.getenv(IDENTITY_SERVICE_PORT));
+				Port = Integer.parseInt(System.getenv(SERVICE_PORT));
 			}
 			catch (Exception ex) {
 				Port = -1;
@@ -50,10 +55,7 @@ public class IdentityHandler {
 		
 		this._httpHelper = httpHelper;
 		
-		logger.info("Identity Service Handler is being initialized with" 
-				+ "identity service base url = " + BaseUrl
-				+ ", identity service prefix = " + PathPrefix 
-				+ ", identity service port = " + Port + "...");
+		logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
 	}
 	
 	public boolean userExist(String accessToken) {

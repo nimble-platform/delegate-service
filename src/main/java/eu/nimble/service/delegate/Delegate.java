@@ -55,6 +55,7 @@ public class Delegate implements ServletContextListener {
     
     private static IndexingHandler indexingHandler;
     private static IdentityHandler identityHandler;
+    private static CatalogHandler catalogHandler;
     /***********************************   Servlet Context   ***********************************/
     
     public void contextInitialized(ServletContextEvent arg0) 

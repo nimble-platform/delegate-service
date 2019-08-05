@@ -30,15 +30,15 @@ import eu.nimble.service.delegate.eureka.ServiceEndpoint;
 import eu.nimble.service.delegate.http.HttpHelper;
 
 /**
- * Indexing Service Result
+ * Indexing Service Handler
  *
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 07/30/2019.
  */
 public class IndexingHandler {
 	private static Logger logger = LogManager.getLogger(IndexingHandler.class);
     
-    private static String INDEXING_SERVICE_URL = "INDEXING_SERVICE_BASE_URL";
-    private static String INDEXING_SERVICE_PORT = "INDEXING_SERVICE_PORT";
+    private static String SERVICE_URL = "INDEXING_SERVICE_BASE_URL";
+    private static String SERVICE_PORT = "INDEXING_SERVICE_PORT";
 	
     public static String GET_ITEM_FIELDS_PATH = "/item/fields";
     public static String GET_ITEM_FIELDS_LOCAL_PATH = "/item/fields/local";
@@ -60,9 +60,9 @@ public class IndexingHandler {
     
     public IndexingHandler(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
     	try {
-	    	BaseUrl = System.getenv(INDEXING_SERVICE_URL);
+	    	BaseUrl = System.getenv(SERVICE_URL);
 			try {
-				Port = Integer.parseInt(System.getenv(INDEXING_SERVICE_PORT));
+				Port = Integer.parseInt(System.getenv(SERVICE_PORT));
 			}
 			catch (Exception ex) {
 				Port = -1;
@@ -83,10 +83,7 @@ public class IndexingHandler {
     	this._httpHelper = httpHelper;
     	this._eurekaHandler = eurekaHandler;
     	
-    	logger.info("Indexing Service Handler is being initialized with" 
-				+ "indexing service base url = " + BaseUrl
-				+ ", indexing service prefix = " + PathPrefix 
-				+ ", indexing service port = " + Port + "...");
+    	logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
     }
     
     @SuppressWarnings("unchecked")
