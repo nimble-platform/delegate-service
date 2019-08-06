@@ -49,44 +49,44 @@ public class Delegate implements ServletContextListener {
     private static Logger logger = LogManager.getLogger(Delegate.class);
 
     private static String FRONTEND_URL = "FRONTEND_URL";
-    private static String frontendServiceUrl;
+    private static String _frontendServiceUrl;
     
-    private static EurekaHandler eurekaHandler;
-    private static HttpHelper httpHelper;
+    private static EurekaHandler _eurekaHandler;
+    private static HttpHelper _httpHelper;
     
-    private static IndexingHandler indexingHandler;
-    private static IdentityHandler identityHandler;
-    private static CatalogHandler catalogHandler;
+    private static IndexingHandler _indexingHandler;
+    private static IdentityHandler _identityHandler;
+    private static CatalogHandler _catalogHandler;
     /***********************************   Servlet Context   ***********************************/
     
     public void contextInitialized(ServletContextEvent arg0) 
     {
     	try {
-    		// frontend service
-    		frontendServiceUrl = System.getenv(FRONTEND_URL);
+    		_frontendServiceUrl = System.getenv(FRONTEND_URL);
     	}
     	catch (Exception ex) {
     		logger.error("service env vars are not set as expected");
     	}
     	
-        logger.info("Delegate service is being initialized with frontend service param = " + frontendServiceUrl);
+        logger.info("Delegate service is being initialized with frontend service param = " + _frontendServiceUrl);
         
-        eurekaHandler = new EurekaHandler();
-        if (!eurekaHandler.initEureka()) {
+        _eurekaHandler = new EurekaHandler();
+        if (!_eurekaHandler.initEureka()) {
             logger.error("Failed to initialize Eureka client");
             return;
         }
         
-        httpHelper = new HttpHelper(eurekaHandler);
-        indexingHandler = new IndexingHandler(httpHelper, eurekaHandler);
-        identityHandler = new IdentityHandler(httpHelper);
+        _httpHelper = new HttpHelper(_eurekaHandler);
+        _indexingHandler = new IndexingHandler(_httpHelper, _eurekaHandler);
+        _identityHandler = new IdentityHandler(_httpHelper);
+        _catalogHandler = new CatalogHandler(_httpHelper, _eurekaHandler);
         
         logger.info("Delegate service has been initialized");
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent arg0) {
-    	eurekaHandler.destroy();
+    	_eurekaHandler.destroy();
         logger.info("Delegate service has been destroyed");
     }
     
@@ -106,9 +106,11 @@ public class Delegate implements ServletContextListener {
     @Produces({ MediaType.APPLICATION_JSON })
     // Return the Delegate services registered in Eureka server (Used for debug)
     public Response eureka() {
-        List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
+        List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
         return Response.status(Response.Status.OK).entity(endpointList).build();
     }
+
+    /***************************************************   INDEXING SERVICE   ***************************************************/
     
     /***********************************   indexing-service/item/fields   ***********************************/
     
@@ -116,14 +118,14 @@ public class Delegate implements ServletContextListener {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/item/fields")
     public Response federatedGetItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
-    	logger.info("called federated get item fields");
+    	logger.info("called federated get item fields (indexing service call)");
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
     	if (fieldName != null && !fieldName.isEmpty()) {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, queryParams);
-    	List<Map<String, Object>> aggregatedResults = indexingHandler.mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = _httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, queryParams);
+    	List<Map<String, Object>> aggregatedResults = _indexingHandler.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -139,9 +141,9 @@ public class Delegate implements ServletContextListener {
     public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH, queryParams);
+        URI uri = _httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH, queryParams);
         
-        return httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), null, frontendServiceUrl);
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/fields - END   ***********************************/
@@ -153,14 +155,14 @@ public class Delegate implements ServletContextListener {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/party/fields")
     public Response federatedGetPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
-    	logger.info("called federated get party fields");
+    	logger.info("called federated get party fields (indexing service call)");
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
     	if (fieldName != null && !fieldName.isEmpty()) {
     		queryParams.put("fieldName", fieldName);
         }
     	logger.info("query params: " + queryParams.toString());
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, queryParams);
-    	List<Map<String, Object>> aggregatedResults = indexingHandler.mergeGetResponsesByFieldName(resultList);
+    	HashMap<ServiceEndpoint, String> resultList = _httpHelper.sendGetRequestToAllDelegates(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, queryParams);
+    	List<Map<String, Object>> aggregatedResults = _indexingHandler.mergeGetResponsesByFieldName(resultList);
     	
     	return Response.status(Response.Status.OK)
     				   .type(MediaType.APPLICATION_JSON)
@@ -176,9 +178,9 @@ public class Delegate implements ServletContextListener {
     public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         queryParams.put("fieldName", fieldName);
-        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH, queryParams);
+        URI uri = _httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH, queryParams);
         
-        return httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), null, frontendServiceUrl);
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/fields - END   ***********************************/
@@ -194,15 +196,15 @@ public class Delegate implements ServletContextListener {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/item/search")
     public Response federatedPostItemSearch(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
-    	logger.info("called federated post item search");
+    	logger.info("called federated post item search (indexing service call)");
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
     																			Integer.parseInt(body.get("start").toString())); 
-    	HashMap<ServiceEndpoint, String> resultList = indexingHandler.getPostItemSearchAggregatedResults(body);
+    	HashMap<ServiceEndpoint, String> resultList = _indexingHandler.getPostItemSearchAggregatedResults(body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(eurekaHandler.getId()));
+    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(_eurekaHandler.getId()));
     	}
     	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
@@ -218,19 +220,19 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search/local")
     public Response postItemSearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH);
-    	if (indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH);
+    	if (_indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	_indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	
-        URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
+        URI uri = _httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headers, frontendServiceUrl);
+        return _httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headers, _frontendServiceUrl);
     }
     
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -246,23 +248,23 @@ public class Delegate implements ServletContextListener {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search")
     public Response federatedPostPartySearch(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
-    	logger.info("called federated post party search");
-    	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
+    	logger.info("called federated post party search (indexing service call)");
+    	List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult;
     	if (body.get("start") != null) {
-    	indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
-														  Integer.parseInt(body.get("start").toString()));
+    		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
+														  	  Integer.parseInt(body.get("start").toString()));
     	}
     	else {
     		indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 0);
     	}
     	
-    	HashMap<ServiceEndpoint, String> resultList = httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, body);
+    	HashMap<ServiceEndpoint, String> resultList = _httpHelper.sendPostRequestToAllDelegates(endpointList, IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, body);
     	
     	for (ServiceEndpoint endpoint : resultList.keySet()) {
     		String results = resultList.get(endpoint);
-    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(eurekaHandler.getId()));
+    		indexingServiceResult.addEndpointResponse(endpoint, results, endpoint.getId().equals(_eurekaHandler.getId()));
     	}
     	return Response.status(Response.Status.OK)
     								   .type(MediaType.APPLICATION_JSON)
@@ -279,20 +281,72 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search/local")
     public Response postPartySearch(Map<String, Object> body) {
     	// if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-    	Set<String> localFieldNames = indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH);
-    	if (indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
+    	Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(IndexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH);
+    	if (_indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
     		return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
     	}
     	// remove from body.facet.field all fieldNames that doesn't exist in local instance 
-    	indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
+    	_indexingHandler.removeNonExistingFieldNamesFromBody(body, localFieldNames);
     	 
-    	URI uri = httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_PARTY_SEARCH_PATH, null);
+    	URI uri = _httpHelper.buildUri(IndexingHandler.BaseUrl, IndexingHandler.Port, IndexingHandler.PathPrefix+IndexingHandler.POST_PARTY_SEARCH_PATH, null);
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Content-Type", "application/json");
         
-        return httpHelper.forwardPostRequest(IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, uri.toString(), body, headers, frontendServiceUrl);
+        return _httpHelper.forwardPostRequest(IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, uri.toString(), body, headers, _frontendServiceUrl);
     }
     
     /***********************************   indexing-service/party/search - END   ***********************************/
+	
+	/************************************************   INDEXING SERVICE - END   ************************************************/
+	
+	/***************************************************   CATALOG SERVICE   ***************************************************/
+	
+	/***********************************   catalog-service/binary-contents   ***********************************/
+    
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/binary-contents")
+    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) {
+    	logger.info("called federated get binary contents (catalog service call)");
+    	// validation check of the authorization header
+    	if (_identityHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
+    	// TODO replace authorization header to the federation delegate access token
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	if (uris != null && !uris.isEmpty()) {
+    		queryParams.put("uris", uris);
+        }
+    	logger.info("query params: " + queryParams.toString());
+
+    	String targetNimbleInstnaceName = headers.getHeaderString("nimbleInstanceName");
+    	ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(targetNimbleInstnaceName);
+    	URI targetUri = _httpHelper.buildUri(nimbleInfo.getHostName(), nimbleInfo.getPort(), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams);
+    	
+    	MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+    	headersToSend.add(HttpHeaders.AUTHORIZATION, "delegate access token in the federation identity service");
+    	
+    	return _httpHelper.sendGetRequest(targetUri, headersToSend);
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    // TODO add authorization header to make sure the caller is a delegate rather than a human (after adding federation identity service)
+    @GET
+    @Path("/binary-contents/local")
+    public Response getBinaryContentsLocal(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) {
+    	// TODO validate delegate access token
+    	// TODO replace access token with the local access token of the delegate service
+    	
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        queryParams.put("uris", uris);
+        URI uri = _httpHelper.buildUri(CatalogHandler.BaseUrl, CatalogHandler.Port, CatalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENTS_PATH, queryParams);
+        
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
+    }
+    
+    /***********************************   catalog-service/binary-contents - END   ***********************************/
+    
+    /************************************************   CATALOG SERVICE - END   ************************************************/
 }

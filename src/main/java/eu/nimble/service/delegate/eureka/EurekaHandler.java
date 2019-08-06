@@ -62,6 +62,17 @@ public class EurekaHandler {
         return delegateList;
     } 
 	
+    public ServiceEndpoint getEndpointByAppName(String appName) {
+    	List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddressAndAppName(vipAddress, appName, false);
+    	for (InstanceInfo info : instanceList) {
+    		// Filter out services that are not UP
+            if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
+                return new ServiceEndpoint(info.getId(), info.getHomePageUrl(), info.getPort(), info.getAppName());
+            }
+        }
+    	return null;
+    }
+    
     public String getId() {
     	return applicationInfoManager.getInfo().getId();
     }

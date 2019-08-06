@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import eu.nimble.service.delegate.eureka.EurekaHandler;
 import eu.nimble.service.delegate.http.HttpHelper;
 
 /**
@@ -18,13 +19,17 @@ public class CatalogHandler {
     private static String SERVICE_URL = "CATALOG_SERVICE_BASE_URL";
     private static String SERVICE_PORT = "CATALOG_SERVICE_PORT";
 	
+    public static String GET_BINARY_CONTENTS_PATH = "/binary-contents";
+    public static String GET_BINARY_CONTENTS_LOCAL_PATH = "/binary-contents/local";
+    
     public static String BaseUrl;
     public static int Port;
     public static String PathPrefix;
 	
 	private HttpHelper _httpHelper;
+	private EurekaHandler _eurekaHandler;
 	
-	public CatalogHandler(HttpHelper httpHelper) {
+	public CatalogHandler(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
 		try {
 			BaseUrl = System.getenv(SERVICE_URL);
 			try {
@@ -47,8 +52,8 @@ public class CatalogHandler {
     	}
 		
 		this._httpHelper = httpHelper;
+		this._eurekaHandler = eurekaHandler;
 		
 		logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
 	}
-
 }

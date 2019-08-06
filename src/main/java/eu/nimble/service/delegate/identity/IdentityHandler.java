@@ -59,6 +59,9 @@ public class IdentityHandler {
 	}
 	
 	public boolean userExist(String accessToken) {
+		if (accessToken == null) {
+			return false;
+		}
 		URI uri = _httpHelper.buildUri(BaseUrl, Port, PathPrefix+GET_USER_INFO_PATH, null);
         logger.info("sending a request to " + uri.toString() + " in order to get user info, based on a give access token");
         
