@@ -5,9 +5,6 @@ import java.util.Arrays;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import eu.nimble.service.delegate.eureka.EurekaHandler;
-import eu.nimble.service.delegate.http.HttpHelper;
-
 /**
  * Catalog Service Handler
  *

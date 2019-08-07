@@ -387,8 +387,7 @@ public class Delegate implements ServletContextListener {
         }
     	logger.info("query params: " + queryParams.toString());
 
-    	String targetNimbleInstnaceName = headers.getHeaderString("nimbleInstanceName");
-    	ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(targetNimbleInstnaceName);
+    	ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(headers.getHeaderString("nimbleInstanceName"));
     	URI targetUri = _httpHelper.buildUri(nimbleInfo.getHostName(), nimbleInfo.getPort(), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams);
     	
     	MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
