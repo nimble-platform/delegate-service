@@ -21,10 +21,10 @@ import com.netflix.discovery.EurekaClient;
  */
 public class EurekaHandler {
 	private static Logger logger = LogManager.getLogger(EurekaHandler.class);
+	private static String VIP_ADDRESS = "eu.nimble.delegate";
 	
-	private static ApplicationInfoManager applicationInfoManager;
-    private static EurekaClient eurekaClient;
-    private static String vipAddress = "eu.nimble.delegate";
+	private ApplicationInfoManager applicationInfoManager;
+    private EurekaClient eurekaClient;
 	
 	 // Initializes Eureka client and registers the service with the Eureka server
     public boolean initEureka() {
@@ -52,7 +52,7 @@ public class EurekaHandler {
     // Returns a list of Delegate services registered in Eureka server
     public List<ServiceEndpoint> getEndpointsFromEureka() {
         List<ServiceEndpoint> delegateList = new ArrayList<ServiceEndpoint>();
-        List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddress(vipAddress, false);
+        List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddress(VIP_ADDRESS, false);
         for (InstanceInfo info : instanceList) {
            // Filter out services that are not UP
            if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
@@ -63,7 +63,7 @@ public class EurekaHandler {
     } 
 	
     public ServiceEndpoint getEndpointByAppName(String appName) {
-    	List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddressAndAppName(vipAddress, appName, false);
+    	List<InstanceInfo> instanceList = eurekaClient.getInstancesByVipAddressAndAppName(VIP_ADDRESS, appName, false);
     	for (InstanceInfo info : instanceList) {
     		// Filter out services that are not UP
             if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {

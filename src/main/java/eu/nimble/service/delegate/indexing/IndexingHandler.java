@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
@@ -49,14 +50,14 @@ public class IndexingHandler {
     public static String POST_PARTY_SEARCH_PATH = "/party/search";
     public static String POST_PARTY_SEARCH_LOCAL_PATH = "/party/search/local";
     
-    public static String BaseUrl;
-    public static int Port;
-    public static String PathPrefix;
+    public String BaseUrl;
+    public int Port;
+    public String PathPrefix;
     
     private EurekaHandler _eurekaHandler;
     private HttpHelper _httpHelper;
-    private static ObjectMapper _mapper = new ObjectMapper();
-    private static JsonParser _jsonParser = new JsonParser();
+    private ObjectMapper _mapper;
+    private JsonParser _jsonParser;
     
     public IndexingHandler(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
     	try {
@@ -83,16 +84,19 @@ public class IndexingHandler {
     	this._httpHelper = httpHelper;
     	this._eurekaHandler = eurekaHandler;
     	
+    	_mapper = new ObjectMapper();
+    	_jsonParser = new JsonParser();
+    	
     	logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
     }
     
     @SuppressWarnings("unchecked")
-  	public HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
+  	public HashMap<ServiceEndpoint, String> getPostItemSearchAggregatedResults(MultivaluedMap<String, Object> headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
       	int requestedPageSize = Integer.parseInt(body.get("rows").toString()); // save it before manipulating
       	// manipulate body in order to get results from all delegates.
       	List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
       	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
-      	HashMap<ServiceEndpoint, String> dummyResultList = _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, body);
+      	HashMap<ServiceEndpoint, String> dummyResultList = _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, headers, body);
       	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
       	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
       		String result = dummyResultList.get(endpoint);
@@ -115,7 +119,7 @@ public class IndexingHandler {
       	}
       	if (sumTotalElements <= requestedPageSize || requestedPageSize == 0 || endpointList.size()==1) {
       		body.put("rows", requestedPageSize); 
-      		return _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, body);
+      		return _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, headers, body);
       	}
       	// else, we need to decide how many results we want from each delegate
       	// TODO work on this logic!
@@ -131,7 +135,7 @@ public class IndexingHandler {
       		listForRequest.add(endpoint);
       		body.put("rows", endpointRows); // manipulate body values
       		logger.info("requesting from endpoint " + endpointRows + " rows, body = " + body);
-      		aggregatedResults.putAll(_httpHelper.sendPostRequestToAllDelegates(listForRequest, POST_ITEM_SEARCH_LOCAL_PATH, body));
+      		aggregatedResults.putAll(_httpHelper.sendPostRequestToAllDelegates(listForRequest, POST_ITEM_SEARCH_LOCAL_PATH, headers, body));
       		numOfRowsAggregated += endpointRows;
       	}
       	

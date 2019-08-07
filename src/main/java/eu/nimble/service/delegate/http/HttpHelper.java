@@ -31,9 +31,8 @@ import eu.nimble.service.delegate.eureka.ServiceEndpoint;
  * Created by Nir Rozenbaum (nirro@il.ibm.com) 07/30/2019.
  */
 public class HttpHelper {
-	private static final int REQ_TIMEOUT_SEC = 3;
-	
 	private static Logger logger = LogManager.getLogger(HttpHelper.class);
+	private static final int REQ_TIMEOUT_SEC = 3;
 	
 	private Client httpClient;
 	private EurekaHandler eurekaHandler;
@@ -110,8 +109,16 @@ public class HttpHelper {
     	return builder.get();
     }
     
+    public Response sendPostRequest(URI uri, MultivaluedMap<String, Object> headers, Map<String, Object> body) {
+    	Builder builder = httpClient.target(uri.toString()).request();
+    	if (headers != null) {
+    		builder.headers(headers);
+    	}
+    	return builder.post(Entity.json(body));
+    }
+    
     // Sends the get request to all the Delegate services which are registered in the Eureka server
-    public HashMap<ServiceEndpoint, String> sendGetRequestToAllDelegates(String urlPath, HashMap<String, List<String>> queryParams) {
+    public HashMap<ServiceEndpoint, String> sendGetRequestToAllDelegates(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, List<String>> queryParams) {
     	logger.info("send get requests to all delegates");
     	List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
@@ -129,21 +136,21 @@ public class HttpHelper {
             URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
             
             logger.info("sending the request to " + endpoint.toString() + "...");
-            Future<Response> result = httpClient.target(uri.toString()).request().async().get();
+            Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().get();
             futureList.add(result);
         }
         return getResponseListFromAllDelegates(endpointList, futureList);
     }
     
     // Sends the post request to all the Delegate services which are registered in the Eureka server
-    public HashMap<ServiceEndpoint, String> sendPostRequestToAllDelegates(List<ServiceEndpoint> endpointList, String urlPath, Map<String, Object> body) {
+    public HashMap<ServiceEndpoint, String> sendPostRequestToAllDelegates(List<ServiceEndpoint> endpointList, String urlPath, MultivaluedMap<String, Object> headers, Map<String, Object> body) {
     	logger.info("send post requests to all delegates");
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
             URI uri = buildUri(endpoint.getHostName(), endpoint.getPort(), urlPath, null);
             logger.info("sending the request to " + endpoint.toString() + "...");
-            Future<Response> result = httpClient.target(uri.toString()).request().async().post(Entity.json(body));
+            Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().post(Entity.json(body));
             futureList.add(result);
         }
         return getResponseListFromAllDelegates(endpointList, futureList);

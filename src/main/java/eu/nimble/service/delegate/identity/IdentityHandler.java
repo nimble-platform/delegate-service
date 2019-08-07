@@ -1,7 +1,9 @@
 package eu.nimble.service.delegate.identity;
 
+import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
@@ -9,6 +11,10 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.nimble.service.delegate.http.HttpHelper;
 
@@ -20,50 +26,62 @@ import eu.nimble.service.delegate.http.HttpHelper;
 public class IdentityHandler {
 	private static Logger logger = LogManager.getLogger(IdentityHandler.class);
 	
-    private static String SERVICE_URL = "IDENTITY_SERVICE_BASE_URL";
-    private static String SERVICE_PORT = "IDENTITY_SERVICE_PORT";
-	
+    public static String POST_LOGIN_PATH = "/login";
 	public static String GET_USER_INFO_PATH = "/user-info";
 	
-    public static String BaseUrl;
-    public static int Port;
-    public static String PathPrefix;
+    private String _baseUrl;
+    private int _port;
+    private String _pathPrefix;
+    private String _username;
+    private String _password;
 	
 	private HttpHelper _httpHelper;
+	private static ObjectMapper _mapper;
 	
-	public IdentityHandler(HttpHelper httpHelper) {
-		try {
-			BaseUrl = System.getenv(SERVICE_URL);
-			try {
-				Port = Integer.parseInt(System.getenv(SERVICE_PORT));
-			}
-			catch (Exception ex) {
-				Port = -1;
-			}
-			String[] serviceUrlParts = BaseUrl.split("/");
-			if (serviceUrlParts.length > 1) {
-				BaseUrl = serviceUrlParts[0];
-				PathPrefix = "/"+String.join("/", Arrays.copyOfRange(serviceUrlParts, 1, serviceUrlParts.length));
-			}
-			else {
-				PathPrefix = "";
-			}
-		}
-		catch (Exception ex) {
-    		logger.error("service env vars are not set as expected");
-    	}
+	public IdentityHandler(HttpHelper httpHelper, String baseUrl, int port, String pathPrefix, String username, String password) {
+		_baseUrl = baseUrl;
+		_port = port;
+		_pathPrefix = pathPrefix;
+		_username = username;
+		_password = password;
 		
 		this._httpHelper = httpHelper;
 		
-		logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
+		_mapper = new ObjectMapper();
+		
+		logger.info("Identity Service Handler is being initialized with base url = " + _baseUrl + ", path prefix = " + _pathPrefix + ", port = " + _port + "...");
+	}
+	
+	@SuppressWarnings("unchecked")
+	public String getAccessToken() throws JsonParseException, JsonMappingException, IOException {
+		Map<String, Object> body = new HashMap<String, Object>();
+		body.put("username", _username);
+		body.put("password", _password);
+		
+		URI uri = _httpHelper.buildUri(_baseUrl, _port, _pathPrefix+POST_LOGIN_PATH, null);
+        logger.info("sending a request to " + uri.toString() + " in order to login using username and password");
+        
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
+        headers.add("Accept", "application/json");
+        headers.add("Content-Type", "application/json");
+        
+        Response response = _httpHelper.sendPostRequest(uri, headers, body);
+        String userData = response.readEntity(String.class);
+		Map<String, Object> json = _mapper.readValue(userData, Map.class);
+        return json.get("accessToken").toString();
 	}
 	
 	public boolean userExist(String accessToken) {
 		if (accessToken == null) {
 			return false;
 		}
-		URI uri = _httpHelper.buildUri(BaseUrl, Port, PathPrefix+GET_USER_INFO_PATH, null);
-        logger.info("sending a request to " + uri.toString() + " in order to get user info, based on a give access token");
+		// TODO remove this line of checking cross delegates requests
+		if (accessToken.equals("delegate access token in the federation identity service")) {
+			return true;
+		}
+		
+		URI uri = _httpHelper.buildUri(_baseUrl, _port, _pathPrefix+GET_USER_INFO_PATH, null);
+        logger.info("sending a request to " + uri.toString() + " in order to get user info, based on a given access token");
         
         MultivaluedMap<String, Object> headers = new MultivaluedHashMap<String, Object>();
         headers.add("Accept", "application/json");

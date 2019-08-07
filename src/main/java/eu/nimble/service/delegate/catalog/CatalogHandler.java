@@ -22,14 +22,11 @@ public class CatalogHandler {
     public static String GET_BINARY_CONTENTS_PATH = "/binary-contents";
     public static String GET_BINARY_CONTENTS_LOCAL_PATH = "/binary-contents/local";
     
-    public static String BaseUrl;
-    public static int Port;
-    public static String PathPrefix;
+    public String BaseUrl;
+    public int Port;
+    public String PathPrefix;
 	
-	private HttpHelper _httpHelper;
-	private EurekaHandler _eurekaHandler;
-	
-	public CatalogHandler(HttpHelper httpHelper, EurekaHandler eurekaHandler) {
+	public CatalogHandler() {
 		try {
 			BaseUrl = System.getenv(SERVICE_URL);
 			try {
@@ -50,9 +47,6 @@ public class CatalogHandler {
 		catch (Exception ex) {
     		logger.error("service env vars are not set as expected");
     	}
-		
-		this._httpHelper = httpHelper;
-		this._eurekaHandler = eurekaHandler;
 		
 		logger.info("Service Handler is being initialized with base url = " + BaseUrl + ", path prefix = " + PathPrefix + ", port = " + Port + "...");
 	}
