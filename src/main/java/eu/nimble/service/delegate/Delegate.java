@@ -375,7 +375,7 @@ public class Delegate implements ServletContextListener {
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
     	
-        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LINE_BY_HJID_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   catalog-service/{standard}/{uuid} - END   ***********************************/
 	
@@ -443,7 +443,7 @@ public class Delegate implements ServletContextListener {
     		list.add(uri);
     		queryParams.put("uri", list);
         }
-    	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, null);
+    	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, queryParams);
     }
     
     // a REST call that should be used between delegates. 
@@ -454,21 +454,54 @@ public class Delegate implements ServletContextListener {
     	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
-        URI catalogServiceUri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENT_PATH, null);
-        
-        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
-        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-    	
-        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
     	if (uri != null) {
     		List<String> list = new LinkedList<String>();
     		list.add(uri);
     		queryParams.put("uri", list);
-        }
+    	}
+        URI catalogServiceUri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENT_PATH, queryParams);
+        
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         
         return _httpHelper.forwardGetRequest(CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   catalog-service/binary-content - END   ************************************/
+    
+    /****************************************   catalog-service/catalogue/{catalogueUuid}/cataloguelines   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogue/{catalogueUuid}/cataloguelines") 
+    public Response getCatalogLines(@PathParam("catalogueUuid") String catalogueUuid, @Context HttpHeaders headers, @QueryParam("lineIds") List<String> lineIds) throws JsonParseException, JsonMappingException, IOException {
+    	logger.info("called federated get catalog lines (catalog service call)");
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	if (lineIds != null) {
+    		queryParams.put("lineIds", lineIds);
+        }
+    	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(CatalogHandler.GET_CATALOG_LINES_LOCAL_PATH, catalogueUuid), queryParams);
+    }
+    
+    // a REST call that should be used between delegates. 
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    @GET
+    @Path("/catalogue/{catalogueUuid}/cataloguelines/local")
+    public Response getCatalogLinesLocal(@PathParam("catalogueUuid") String catalogueUuid, @Context HttpHeaders headers, @QueryParam("lineIds") List<String> lineIds) throws JsonParseException, JsonMappingException, IOException {
+    	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
+    	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+    	if (lineIds != null) {
+    		queryParams.put("lineIds", lineIds);
+        }
+        URI catalogServiceUri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, String.format(_catalogHandler.PathPrefix+CatalogHandler.GET_CATALOG_LINES_PATH, catalogueUuid), queryParams);
+        
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   catalog-service/catalogue/{catalogueUuid}/cataloguelines - END   ************************************/
     
 	/***********************************   catalog-service/binary-contents   ***********************************/
     @GET

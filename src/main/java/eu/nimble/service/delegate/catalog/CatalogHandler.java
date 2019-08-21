@@ -30,6 +30,8 @@ public class CatalogHandler {
     public static String GET_CATALOG_LINE_LOCAL_PATH = "/catalogue/%s/catalogueline/%s/local";
     public static String GET_BINARY_CONTENT_PATH = "/binary-content";
     public static String GET_BINARY_CONTENT_LOCAL_PATH = "/binary-content/local";
+    public static String GET_CATALOG_LINES_PATH = "catalogue/%s/cataloguelines";
+    public static String GET_CATALOG_LINES_LOCAL_PATH = "catalogue/%s/cataloguelines/local";
     public static String GET_BINARY_CONTENTS_PATH = "/binary-contents";
     public static String GET_BINARY_CONTENTS_LOCAL_PATH = "/binary-contents/local";
     
