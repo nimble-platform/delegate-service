@@ -75,10 +75,6 @@ public class IdentityHandler {
 		if (accessToken == null) {
 			return false;
 		}
-		// TODO remove this line of checking cross delegates requests
-		if (accessToken.equals("delegate access token in the federation identity service")) {
-			return true;
-		}
 		
 		URI uri = _httpHelper.buildUri(_baseUrl, _port, _pathPrefix+GET_USER_INFO_PATH, null);
         logger.info("sending a request to " + uri.toString() + " in order to get user info, based on a given access token");

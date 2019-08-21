@@ -128,9 +128,11 @@ public class HttpHelper {
             UriBuilder uriBuilder = UriBuilder.fromUri("");
             uriBuilder.scheme("http");
             // add all query params to the request
-            for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
-            	for (String paramValue : queryParam.getValue()) {
-            		uriBuilder.queryParam(queryParam.getKey(), paramValue);
+            if (queryParams != null) {
+            	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
+            		for (String paramValue : queryParam.getValue()) {
+            			uriBuilder.queryParam(queryParam.getKey(), paramValue);
+            		}
             	}
             }
             URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
@@ -166,11 +168,17 @@ public class HttpHelper {
             logger.info("got response from " + endpoint.toString());
             try {
             	Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+            	if (res.getStatus() > 300) {
+            		logger.warn("got failure status code " + res.getStatus() + " from appName:" + endpoint.getAppName() +
+                            " (" + endpoint.getHostName() +
+                            ":" + endpoint.getPort() + ")");
+            		continue;
+            	}
                 String data = res.readEntity(String.class);
                 endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
                 resList.put(endpoint, data);
             } catch(Exception e) {
-                logger.warn("Failed to send post request to eureka endpoint: id: " +  endpoint.getId() +
+                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
                 			" appName:" + endpoint.getAppName() +
                             " (" + endpoint.getHostName() +
                             ":" + endpoint.getPort() + ") - " +
