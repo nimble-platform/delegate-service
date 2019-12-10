@@ -17,7 +17,7 @@ node ('nimble-jenkins-slave') {
         }
 
         stage ('Build docker image') {
-            sh 'docker build -t nimbleplatform/Delegate-service:staging .'
+            sh 'docker build -t nimbleplatform/delegate-service:staging .'
         }
 
         stage ('Push docker image') {
