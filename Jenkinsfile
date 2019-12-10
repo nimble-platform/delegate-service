@@ -17,14 +17,11 @@ node ('nimble-jenkins-slave') {
         }
 
         stage ('Build docker image') {
-            sh 'docker build -t nimbleplatform/Delegate-service:${BUILD_NUMBER} .'
-            sh 'sleep 5'
+            sh 'docker build -t nimbleplatform/Delegate-service:staging .'
         }
 
         stage ('Push docker image') {
-            withDockerRegistry([credentialsId: 'NimbleDocker']) {
-                sh 'docker push nimbleplatform/Delegate-service:${BUILD_NUMBER}'
-            }
+            sh 'docker push nimbleplatform/delegate-service:staging'
         }
 
         stage('Deploy') {
