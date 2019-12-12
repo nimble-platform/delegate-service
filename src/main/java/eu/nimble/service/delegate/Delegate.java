@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import eu.nimble.service.delegate.businessprocess.BusinessProcessHandler;
+import eu.nimble.service.delegate.businessprocess.MergeOption;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
