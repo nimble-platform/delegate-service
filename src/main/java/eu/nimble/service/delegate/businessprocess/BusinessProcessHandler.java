@@ -369,6 +369,7 @@ public class BusinessProcessHandler {
 
     public static String mergeProcessInstanceGroupFilters(List<Future<Response>> futureList){
         JsonArray tradingPartnerIDs = new JsonArray();
+        JsonArray tradingPartnerFederationIds = new JsonArray();
         JsonArray tradingPartnerNames = new JsonArray();
         JsonArray relatedProducts = new JsonArray();
         JsonArray relatedProductCategories = new JsonArray();
@@ -394,6 +395,12 @@ public class BusinessProcessHandler {
                 for (JsonElement tradingPartnerID : _tradingPartnerIDs) {
                     if(!tradingPartnerIDs.contains(tradingPartnerID)){
                         tradingPartnerIDs.add(tradingPartnerID);
+                    }
+                }
+                JsonArray _tradingPartnerFederationIds = processInstanceGroupFilter.get("tradingPartnerFederationIds").getAsJsonArray();
+                for (JsonElement tradingPartnerFederationId : _tradingPartnerFederationIds) {
+                    if(!tradingPartnerFederationIds.contains(tradingPartnerFederationId)){
+                        tradingPartnerFederationIds.add(tradingPartnerFederationId);
                     }
                 }
                 JsonArray _tradingPartnerNames = processInstanceGroupFilter.get("tradingPartnerNames").getAsJsonArray();
@@ -430,6 +437,7 @@ public class BusinessProcessHandler {
         }
         JsonObject jsonObject = new JsonObject();
         jsonObject.add("tradingPartnerIDs",tradingPartnerIDs);
+        jsonObject.add("tradingPartnerFederationIds",tradingPartnerFederationIds);
         jsonObject.add("tradingPartnerNames",tradingPartnerNames);
         jsonObject.add("relatedProducts",relatedProducts);
         jsonObject.add("relatedProductCategories",relatedProductCategories);
