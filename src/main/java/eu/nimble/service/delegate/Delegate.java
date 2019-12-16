@@ -165,6 +165,10 @@ public class Delegate implements ServletContextListener {
     @Path("/item/fields")
     public Response federatedGetItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated get item fields (indexing service call)");
+    	// validation check of the authorization header in the local identity service
+    	if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
     	if (fieldName != null && !fieldName.isEmpty()) {
     		queryParams.put("fieldName", fieldName);
@@ -186,7 +190,7 @@ public class Delegate implements ServletContextListener {
     // the origin delegate sends a request and the target delegate will perform the query locally.
     @GET
     @Path("/item/fields/local")
-    public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
     	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
@@ -194,7 +198,10 @@ public class Delegate implements ServletContextListener {
         queryParams.put("fieldName", fieldName);
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH, queryParams);
         
-        return _httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/item/fields - END   ***********************************/
 
@@ -204,6 +211,9 @@ public class Delegate implements ServletContextListener {
     @Path("/party/fields")
     public Response federatedGetPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated get party fields (indexing service call)");
+    	if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
     	if (fieldName != null && !fieldName.isEmpty()) {
     		queryParams.put("fieldName", fieldName);
@@ -225,7 +235,7 @@ public class Delegate implements ServletContextListener {
     // the origin delegate sends a request and the target delegate will perform the query locally.
     @GET
     @Path("/party/fields/local")
-    public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
     	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
@@ -233,7 +243,10 @@ public class Delegate implements ServletContextListener {
         queryParams.put("fieldName", fieldName);
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH, queryParams);
         
-        return _httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/party/fields - END   ***********************************/
     
@@ -244,6 +257,9 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search")
     public Response federatedPostItemSearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated post item search (indexing service call)");
+    	if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()), 
     																			Integer.parseInt(body.get("start").toString())); 
@@ -268,7 +284,7 @@ public class Delegate implements ServletContextListener {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/item/search/local")
-    public Response postItemSearch(@Context HttpHeaders headers, Map<String, Object> body) {
+    public Response postItemSearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
@@ -284,6 +300,7 @@ public class Delegate implements ServletContextListener {
         
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add("Content-Type", "application/json");
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
     }
@@ -296,6 +313,9 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search")
     public Response federatedPostPartySearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated post party search (indexing service call)");
+    	if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+    		return Response.status(Response.Status.UNAUTHORIZED).build();
+    	}
     	List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
     	//initialize result from the request body
     	IndexingServiceResult indexingServiceResult;
@@ -328,7 +348,7 @@ public class Delegate implements ServletContextListener {
 	@POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search/local")
-    public Response postPartySearch(@Context HttpHeaders headers, Map<String, Object> body) {
+    public Response postPartySearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
 		if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
@@ -344,6 +364,7 @@ public class Delegate implements ServletContextListener {
         
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add("Content-Type", "application/json");
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
     }
@@ -507,7 +528,7 @@ public class Delegate implements ServletContextListener {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/binary-contents")
-    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) {
+    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated get binary contents (catalog service call)");
     	// validation check of the authorization header in the local identity service
     	if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
@@ -519,16 +540,13 @@ public class Delegate implements ServletContextListener {
         }
     	logger.info("query params: " + queryParams.toString());
 
-    	// TODO change and send to all delegates
-    	ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(headers.getHeaderString("nimbleInstanceName"));
-    	URI targetUri = _httpHelper.buildUri(nimbleInfo.getHostName(), nimbleInfo.getPort(), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams);
-    	
     	MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
-    	//TODO change to real token _identityFederationHandler.getAccessToken()
-        headersToSend.add(HttpHeaders.AUTHORIZATION, "delegate access token in the federation identity service");
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityFederationHandler.getAccessToken());
+        
+        HashMap<ServiceEndpoint, String> delegatesResponse = _httpHelper.sendGetRequestToAllDelegates(CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, headersToSend, queryParams);
     	
-        // TODO send to all delegates and aggregate results
-    	return _httpHelper.sendGetRequest(targetUri, headersToSend);
+        // TODO aggregate results
+        return _catalogHandler.buildResponseFromSingleDelegate(delegatesResponse);
     }
     
     // a REST call that should be used between delegates. 
@@ -540,7 +558,9 @@ public class Delegate implements ServletContextListener {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-        queryParams.put("uris", uris);
+        if (uris != null && !uris.isEmpty()) {
+    		queryParams.put("uris", uris);
+        }
         URI uri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENTS_PATH, queryParams);
         
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
