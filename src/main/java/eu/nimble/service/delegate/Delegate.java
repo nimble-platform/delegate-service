@@ -380,7 +380,7 @@ public class Delegate implements ServletContextListener {
     @Path("/catalogue/{standard}/{uuid}") 
     public Response getCatalog(@PathParam("standard") String standard, @PathParam("uuid") String uuid, @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated get catalog (catalog service call)");
-    	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(CatalogHandler.GET_CATALOG_LINE_LOCAL_PATH, standard, uuid), null);
+    	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(CatalogHandler.GET_CATALOG_LOCAL_PATH, standard, uuid), null);
     }
     
     // a REST call that should be used between delegates. 
