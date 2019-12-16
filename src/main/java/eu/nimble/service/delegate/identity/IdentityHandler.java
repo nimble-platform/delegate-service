@@ -68,6 +68,10 @@ public class IdentityHandler {
         Response response = _httpHelper.sendPostRequest(uri, headers, body);
         String userData = response.readEntity(String.class);
 		Map<String, Object> json = _mapper.readValue(userData, Map.class);
+		logger.info("***");
+		logger.info("user data:");
+		logger.info(json);
+		logger.info("***");
         return json.get("accessToken").toString();
 	}
 	
