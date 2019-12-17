@@ -100,6 +100,10 @@ public class IndexingHandler {
       	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
       	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
       		String result = dummyResultList.get(endpoint);
+      		logger.info("***");
+      		logger.info("got result from endpoint: " + endpoint);
+      		logger.info(result);
+      		logger.info("***");
       		if (result == null || result.isEmpty()) {
       			endpointsToRemove.add(endpoint);
       		}
