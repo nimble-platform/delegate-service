@@ -520,7 +520,7 @@ public class Delegate implements ServletContextListener {
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         
-        return _httpHelper.forwardGetRequest(CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LINES_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   catalog-service/catalogue/{catalogueUuid}/cataloguelines - END   ************************************/
     
