@@ -497,9 +497,11 @@ public class Delegate implements ServletContextListener {
     public Response getCatalogLines(@PathParam("catalogueUuid") String catalogueUuid, @Context HttpHeaders headers, @QueryParam("lineIds") List<String> lineIds) throws JsonParseException, JsonMappingException, IOException {
     	logger.info("called federated get catalog lines (catalog service call)");
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-    	if (lineIds != null) {
+    	if (lineIds != null && !lineIds.isEmpty()) {
     		queryParams.put("lineIds", lineIds);
         }
+    	logger.info("query params: " + queryParams.toString());
+    	
     	return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(CatalogHandler.GET_CATALOG_LINES_LOCAL_PATH, catalogueUuid), queryParams);
     }
     
@@ -512,9 +514,11 @@ public class Delegate implements ServletContextListener {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
     	}
     	HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-    	if (lineIds != null) {
+    	if (lineIds != null && !lineIds.isEmpty()) {
     		queryParams.put("lineIds", lineIds);
         }
+    	logger.info("query params: " + queryParams.toString());
+    	
         URI catalogServiceUri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, String.format(_catalogHandler.PathPrefix+CatalogHandler.GET_CATALOG_LINES_PATH, catalogueUuid), queryParams);
         
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();

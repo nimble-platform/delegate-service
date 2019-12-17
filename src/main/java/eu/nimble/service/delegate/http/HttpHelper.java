@@ -71,14 +71,7 @@ public class HttpHelper {
     	Response response = builder.get();
     	
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
-        	logger.info("******");
-        	logger.info("response returned: ");
-        	logger.info(response);
-        	
         	String data = response.readEntity(String.class);
-        	logger.info("data: ");
-        	logger.info(data);
-        	logger.info("******");
             return Response.status(Status.OK)
             				.entity(data)
             				.type(MediaType.APPLICATION_JSON)
