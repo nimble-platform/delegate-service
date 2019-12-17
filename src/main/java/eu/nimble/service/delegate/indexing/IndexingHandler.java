@@ -98,12 +98,14 @@ public class IndexingHandler {
       	body.put("rows", 0); // send dummy request just to get totalElements fields from all delegates
       	HashMap<ServiceEndpoint, String> dummyResultList = _httpHelper.sendPostRequestToAllDelegates(endpointList, POST_ITEM_SEARCH_LOCAL_PATH, headers, body);
       	List<ServiceEndpoint> endpointsToRemove = new LinkedList<ServiceEndpoint>();
+      	
+      	for (ServiceEndpoint endpoint : endpointList) {
+      		if (dummyResultList.containsKey(endpoint) == false) {
+      			endpointsToRemove.add(endpoint);
+      		}
+      	}
       	for (ServiceEndpoint endpoint : dummyResultList.keySet()) {
       		String result = dummyResultList.get(endpoint);
-      		logger.info("***");
-      		logger.info("got result from endpoint: " + endpoint);
-      		logger.info(result);
-      		logger.info("***");
       		if (result == null || result.isEmpty()) {
       			endpointsToRemove.add(endpoint);
       		}
