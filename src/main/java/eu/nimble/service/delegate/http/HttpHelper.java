@@ -48,8 +48,8 @@ public class HttpHelper {
         uriBuilder.scheme("http");
         if (queryParams != null) {
         	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
-        		if (queryParam.getValue() != null && !queryParam.getValue().isEmpty()) {
-        			uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
+        		for (String paramValue : queryParam.getValue()) {
+        			uriBuilder.queryParam(queryParam.getKey(), paramValue);
         		}
         	}
         }
@@ -124,18 +124,19 @@ public class HttpHelper {
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
-            // Prepare the destination URL
-            UriBuilder uriBuilder = UriBuilder.fromUri("");
-            uriBuilder.scheme("http");
-            // add all query params to the request
-            if (queryParams != null) {
-            	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
-            		for (String paramValue : queryParam.getValue()) {
-            			uriBuilder.queryParam(queryParam.getKey(), paramValue);
-            		}
-            	}
-            }
-            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+//            // Prepare the destination URL
+//            UriBuilder uriBuilder = UriBuilder.fromUri("");
+//            uriBuilder.scheme("http");
+//            // add all query params to the request
+//            if (queryParams != null) {
+//            	for (Entry<String, List<String>> queryParam : queryParams.entrySet()) {
+//            		for (String paramValue : queryParam.getValue()) {
+//            			uriBuilder.queryParam(queryParam.getKey(), paramValue);
+//            		}
+//            	}
+//            }
+//            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+            URI uri = buildUri(endpoint.getHostName(), endpoint.getPort(), urlPath, queryParams);
             
             logger.info("sending the request to " + endpoint.toString() + "...");
             Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().get();
