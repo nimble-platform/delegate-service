@@ -386,7 +386,7 @@ public class Delegate implements ServletContextListener {
     // a REST call that should be used between delegates. 
     // the origin delegate sends a request and the target delegate will perform the query locally.
     @GET
-    @Path("//catalogue/{standard}/{uuid}/local")
+    @Path("/catalogue/{standard}/{uuid}/local")
     public Response getCatalogLocal(@PathParam("standard") String standard, @PathParam("uuid") String uuid, @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
     	if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
     		return Response.status(Response.Status.UNAUTHORIZED).build();
