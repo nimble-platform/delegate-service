@@ -2264,6 +2264,126 @@ public class Delegate implements ServletContextListener {
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
 
+    /****************************************   /paymentDone/{orderId}   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/paymentDone/{orderId}")
+    public Response isPaymentDone(@Context HttpHeaders headers,@PathParam("orderId") String orderId,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated is payment done");
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.IS_PAYMENT_DONE_LOCAL_PATH, orderId), null,null,delegateId);
+    }
+
+    @GET
+    @Path("/paymentDone/{orderId}/local")
+    public Response isPaymentDoneLocal(@Context HttpHeaders headers, @PathParam("orderId") String orderId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        URI businessProcessServiceUri = _httpHelper.buildUri(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, String.format(_businessProcessHandler.PathPrefix+BusinessProcessHandler.IS_PAYMENT_DONE_PATH, orderId), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.IS_PAYMENT_DONE_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /paymentDone/{orderId} - END   ************************************/
+
+    /****************************************   /paymentDone/{orderId}   ****************************************/
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/paymentDone/{orderId}")
+    public Response paymentDone(@Context HttpHeaders headers,@PathParam("orderId") String orderId,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated payment done");
+        return businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.PAYMENT_DONE_LOCAL_PATH, orderId), null,null,delegateId);
+    }
+
+    @POST
+    @Path("/paymentDone/{orderId}/local")
+    public Response paymentDoneLocal(@Context HttpHeaders headers, @PathParam("orderId") String orderId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        URI businessProcessServiceUri = _httpHelper.buildUri(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, String.format(_businessProcessHandler.PathPrefix+BusinessProcessHandler.PAYMENT_DONE_PATH, orderId), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.PAYMENT_DONE_LOCAL_PATH, businessProcessServiceUri.toString(),null, headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /paymentDone/{orderId} - END   ************************************/
+
+    /****************************************   /contract/digital-agreement/{id}   ****************************************/
+    @DELETE
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/contract/digital-agreement/{id}")
+    public Response deleteDigitalAgreement(@Context HttpHeaders headers,@PathParam("id") Long id,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated delete digital agreement");
+        return businessProcessServiceCallWrapper("DELETE",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.DELETE_DIGITAL_AGREEMENT_LOCAL_PATH, id.toString()), null,null,delegateId);
+    }
+
+    @DELETE
+    @Path("/contract/digital-agreement/{id}/local")
+    public Response deleteDigitalAgreementLocal(@Context HttpHeaders headers, @PathParam("id") Long id) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        URI businessProcessServiceUri = _httpHelper.buildUri(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, String.format(_businessProcessHandler.PathPrefix+BusinessProcessHandler.DELETE_DIGITAL_AGREEMENT_PATH, id.toString()), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardDeleteRequestWithStringBody(BusinessProcessHandler.DELETE_DIGITAL_AGREEMENT_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /contract/digital-agreement/{id} - END   ************************************/
+
+    /****************************************   /process-instance-groups/{id}/finish   ****************************************/
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/process-instance-groups/{id}/finish")
+    public Response finishCollaboration(@Context HttpHeaders headers,@PathParam("id") String id,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated finish collaboration");
+        return businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.FINISH_COLLABORATION_LOCAL_PATH, id), null,null,delegateId);
+    }
+
+    @POST
+    @Path("/process-instance-groups/{id}/finish/local")
+    public Response finishCollaborationLocal(@Context HttpHeaders headers, @PathParam("id") String id) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        URI businessProcessServiceUri = _httpHelper.buildUri(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, String.format(_businessProcessHandler.PathPrefix+BusinessProcessHandler.FINISH_COLLABORATION_PATH, id), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.FINISH_COLLABORATION_LOCAL_PATH, businessProcessServiceUri.toString(), null,headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /process-instance-groups/{id}/finish - END   ************************************/
+
+    /****************************************   /processInstance/document/{documentId}   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/processInstance/document/{documentId}")
+    public Response getProcessInstanceIdForDocument(@Context HttpHeaders headers,@PathParam("documentId") String documentId,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get process instance id for document");
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_LOCAL_PATH, documentId), null,null,delegateId);
+    }
+
+    @GET
+    @Path("/processInstance/document/{documentId}/local")
+    public Response getProcessInstanceIdForDocumentLocal(@Context HttpHeaders headers, @PathParam("documentId") String documentId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        URI businessProcessServiceUri = _httpHelper.buildUri(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, String.format(_businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_PATH, documentId), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /processInstance/document/{documentId} - END   ************************************/
+
     /************************************************   BUSINESS PROCESS SERVICE - END   ************************************************/
 
     /***********************************   business-process-service - helper function   ***********************************/

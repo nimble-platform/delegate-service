@@ -191,9 +191,9 @@ public class HttpHelper {
     }
 
     public Response forwardPostRequestWithStringBody(String from, String to, String body, MultivaluedMap<String, Object> headers, String frontendServiceUrlToPutInResponse) {
-        logger.info("got a POST request to endpoint " + from + ", forwarding it to " + to + " with body: " + body.toString());
+        logger.info("got a POST request to endpoint " + from + ", forwarding it to " + to);
 
-        Response response = httpClient.target(to).request().headers(headers).post(Entity.json(body));
+        Response response = httpClient.target(to).request().headers(headers).post(body == null ? null: Entity.json(body));
         if (response.getStatus() >= 200 && response.getStatus() <= 300) {
             String data = response.readEntity(String.class);
             return Response.status(Status.OK)

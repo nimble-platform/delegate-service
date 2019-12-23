@@ -124,6 +124,16 @@ public class BusinessProcessHandler {
     public static String GET_STATISTICS_LOCAL_PATH= "/statistics/overall/local";
     public static String GENERATE_CONTRACT_PATH= "/contracts/create-bundle";
     public static String GENERATE_CONTRACT_LOCAL_PATH= "/contracts/create-bundle/local";
+    public static String IS_PAYMENT_DONE_PATH= "/paymentDone/%s";
+    public static String IS_PAYMENT_DONE_LOCAL_PATH= "/paymentDone/%s/local";
+    public static String PAYMENT_DONE_PATH= "/paymentDone/%s";
+    public static String PAYMENT_DONE_LOCAL_PATH= "/paymentDone/%s/local";
+    public static String DELETE_DIGITAL_AGREEMENT_PATH= "/contract/digital-agreement/%s";
+    public static String DELETE_DIGITAL_AGREEMENT_LOCAL_PATH= "/contract/digital-agreement/%s/local";
+    public static String FINISH_COLLABORATION_PATH= "/process-instance-groups/%s/finish";
+    public static String FINISH_COLLABORATION_LOCAL_PATH= "/process-instance-groups/%s/finish/local";
+    public static String GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_PATH= "/processInstance/document/%s";
+    public static String GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_LOCAL_PATH= "/processInstance/document/%s/local";
 
     public String BaseUrl;
     public int Port;
