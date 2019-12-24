@@ -2384,6 +2384,36 @@ public class Delegate implements ServletContextListener {
     }
     /************************************   /processInstance/document/{documentId} - END   ************************************/
 
+    /****************************************   /statistics/response-time-months   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/statistics/response-time-months")
+    public Response getAverageResponseTimeForMonths(@Context HttpHeaders headers,
+                                                @QueryParam("partyId") String partyId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get average response time for months");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("partyId", partyId);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.AverageResponseTimeForMonths);
+    }
+
+    @GET
+    @Path("/statistics/response-time-months/local")
+    public Response getAverageResponseTimeForMonthsLocal(@Context HttpHeaders headers,
+                                                     @QueryParam("partyId") String partyId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("partyId", partyId);
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port,_businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /statistics/response-time-months - END   ************************************/
+
     /************************************************   BUSINESS PROCESS SERVICE - END   ************************************************/
 
     /***********************************   business-process-service - helper function   ***********************************/

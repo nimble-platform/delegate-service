@@ -1,5 +1,7 @@
 package eu.nimble.service.delegate.businessprocess;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -76,6 +78,8 @@ public class BusinessProcessHandler {
     public static String GET_AVERAGE_RESPONSE_TIME_LOCAL_PATH= "/statistics/response-time/local";
     public static String GET_AVERAGE_COLLABORATION_TIME_PATH= "/statistics/collaboration-time";
     public static String GET_AVERAGE_COLLABORATION_TIME_LOCAL_PATH= "/statistics/collaboration-time/local";
+    public static String GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_PATH= "/statistics/response-time-months";
+    public static String GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH= "/statistics/response-time-months/local";
     public static String GET_RATING_SUMMARY_PATH= "/ratingsSummary";
     public static String GET_RATING_SUMMARY_LOCAL_PATH= "/ratingsSummary/local";
     public static String GET_FEDERATED_COLLABORATION_GROUP_PATH= "/collaboration-groups/federated";
@@ -217,6 +221,74 @@ public class BusinessProcessHandler {
             }
         }
         return Double.toString(result);
+    }
+
+    public static String mergeAverageResponseTimeForMonths(List<Future<Response>> futureList){
+        Map<Integer,Double> map = new HashMap<>();
+
+        JsonParser jsonParser = new JsonParser();
+
+        Set<Integer> keySet = null;
+
+        // Wait (one by one) for the responses from all the services
+        HashMap<ServiceEndpoint, String> resList = new HashMap<ServiceEndpoint, String>();
+        for(int i = 0; i< futureList.size(); i++) {
+            Future<Response> response = futureList.get(i);
+            try {
+                Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+                if (res.getStatus() > 300) {
+//                    logger.warn("got failure status code " + res.getStatus() + " from appName:" + endpoint.getAppName() +
+//                            " (" + endpoint.getHostName() +
+//                            ":" + endpoint.getPort() + ")");
+                    continue;
+                }
+                String data = res.readEntity(String.class);
+                JsonObject jsonObject = jsonParser.parse(data).getAsJsonObject();
+                if(keySet == null){
+                    keySet = new HashSet<>();
+                }
+                for (String s1 : jsonObject.keySet()) {
+                    Integer key = Integer.parseInt(s1);
+                    Double value = jsonObject.get(s1).getAsDouble();
+
+                    keySet.add(key);
+
+                    if(value == 0){
+                        continue;
+                    }
+
+                    if(map.containsKey(key)){
+                        value = (map.get(key) + value) / 2.0;
+                        map.put(key, value);
+                    }
+                    else{
+                        map.put(key, value);
+                    }
+                }
+
+            } catch(Exception e) {
+//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getAppName() +
+//                        " appName:" + endpoint.getAppName() +
+//                        " (" + endpoint.getHostName() +
+//                        ":" + endpoint.getPort() + ") - " +
+//                        e.getMessage());
+            }
+        }
+
+        if(keySet != null){
+            keySet.removeAll(map.keySet());
+            for (Integer key : keySet) {
+                map.put(key,0.0);
+            }
+        }
+
+        String result = null;
+        try {
+            result = new ObjectMapper().writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to serialize map ",e);
+        }
+        return result;
     }
 
     public static String mergeRatingSummaries(List<Future<Response>> futureList){

@@ -8,5 +8,6 @@ public enum MergeOption {
     ProcessInstanceGroupFilter,
     IndividualRatingsAndReviews,
     ProcessInstanceData,
-    OverallStatistics
+    OverallStatistics,
+    AverageResponseTimeForMonths
 }

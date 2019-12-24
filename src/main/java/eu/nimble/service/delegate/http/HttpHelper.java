@@ -294,6 +294,9 @@ public class HttpHelper {
         else if(mergeOption == MergeOption.DoubleResults){
             return BusinessProcessHandler.mergeDoubleResults(futureList);
         }
+        else if(mergeOption == MergeOption.AverageResponseTimeForMonths){
+            return BusinessProcessHandler.mergeAverageResponseTimeForMonths(futureList);
+        }
         else if(mergeOption == MergeOption.RatingSummaries){
             return BusinessProcessHandler.mergeRatingSummaries(futureList);
         }
