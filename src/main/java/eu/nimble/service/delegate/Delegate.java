@@ -811,7 +811,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.CREATE_RATINGS_AND_REVIEWS_LOCAL_PATH, businessProcessServiceUri.toString(), null,headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id}/archive - END   ************************************/
@@ -850,8 +850,8 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId"));
-        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId"));
+        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId").get(0));
+        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId").get(0));
         return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.CONTINUE_PROCESS_INSTANCE_LOCAL_PATH, businessProcessServiceUri.toString(), body,headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id}/archive - END   ************************************/
@@ -926,8 +926,8 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId"));
-        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId"));
+        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId").get(0));
+        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId").get(0));
         return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.START_PROCESS_INSTANCE_LOCAL_PATH, businessProcessServiceUri.toString(), body,headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id}/archive - END   ************************************/
@@ -1124,7 +1124,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.CHECK_ALL_COLLABORATIONS_FINISHED_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1162,7 +1162,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_ACTION_REQUIRED_PROCESS_COUNT_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1212,7 +1212,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_PROCESS_COUNT_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1258,7 +1258,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_TRADING_VOLUME_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1288,7 +1288,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1318,7 +1318,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_AVERAGE_COLLABORATION_TIME_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1348,7 +1348,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_RATING_SUMMARY_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -1954,8 +1954,8 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId"));
-        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId"));
+        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId").get(0));
+        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_2_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend ,_frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -2219,7 +2219,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_STATISTICS_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
@@ -2409,7 +2409,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("federationId", headers.getRequestHeader("federationId"));
+        headersToSend.add("federationId", headers.getRequestHeader("federationId").get(0));
         return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   /statistics/response-time-months - END   ************************************/
