@@ -744,7 +744,7 @@ public class Delegate implements ServletContextListener {
 
     /****************************************   /collaboration-groups/{id}   ****************************************/
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @Path("/processInstance/{processInstanceId}/isRated")
     public Response isRated(@Context HttpHeaders headers,@PathParam("processInstanceId") String processInstanceId,@QueryParam("partyId") String partyId,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
@@ -865,7 +865,7 @@ public class Delegate implements ServletContextListener {
                                              String body,
                                              @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
-        Response response = businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.START_PROCESS_WITH_DOCUMENT_LOCAL_PATH, null,body,headers.getHeaderString("initiatorFederationId"),headers.getHeaderString("responderFederationIdHeader"),delegateId);
+        Response response = businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.START_PROCESS_WITH_DOCUMENT_LOCAL_PATH, null,body,delegateId);
         return response;
     }
 
@@ -881,8 +881,6 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        headersToSend.add("initiatorFederationId", headers.getRequestHeader("initiatorFederationId"));
-        headersToSend.add("responderFederationId", headers.getRequestHeader("responderFederationId"));
         return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.START_PROCESS_WITH_DOCUMENT_LOCAL_PATH, businessProcessServiceUri.toString(), body,headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id}/archive - END   ************************************/
@@ -1926,11 +1924,11 @@ public class Delegate implements ServletContextListener {
     public Response getDigitalAgreementForPartiesAndProduct(@Context HttpHeaders headers,
                                                             @QueryParam("buyerId") String buyerId,
                                                             @QueryParam("sellerId") String sellerId,
-                                                            @QueryParam("productId") String productId,
+                                                            @QueryParam("productIds") List<String> productIds,
                                                             @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("productId",productId);
+        queryParams.put("productIds",getStringQueryParam(productIds));
         queryParams.put("sellerId",sellerId);
         queryParams.put("buyerId",buyerId);
 
@@ -1942,12 +1940,12 @@ public class Delegate implements ServletContextListener {
     public Response getDigitalAgreementForPartiesAndProductLocal(@Context HttpHeaders headers,
                                                                  @QueryParam("buyerId") String buyerId,
                                                                  @QueryParam("sellerId") String sellerId,
-                                                                 @QueryParam("productId") String productId) throws JsonParseException, JsonMappingException, IOException {
+                                                                 @QueryParam("productIds") List<String> productIds) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("productId",productId);
+        queryParams.put("productIds",getStringQueryParam(productIds));
         queryParams.put("sellerId",sellerId);
         queryParams.put("buyerId",buyerId);
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_2_PATH, queryParams);
