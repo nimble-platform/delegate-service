@@ -2522,8 +2522,8 @@ public class Delegate implements ServletContextListener {
             headers.add("federationId", federationIdHeader);
         }
         if(initiatorFederationIdHeader != null && responderFederationIdHeader != null){
-            headers.add("initiatorFederationIdHeader",initiatorFederationIdHeader);
-            headers.add("responderFederationIdHeader",responderFederationIdHeader);
+            headers.add("initiatorFederationId",initiatorFederationIdHeader);
+            headers.add("responderFederationId",responderFederationIdHeader);
         }
 
         if(response != null){
