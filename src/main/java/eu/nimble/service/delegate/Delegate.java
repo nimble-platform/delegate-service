@@ -2528,7 +2528,7 @@ public class Delegate implements ServletContextListener {
             headers.add("Accept","application/zip");
         }
 
-        String delegateResponse = null;
+        DelegateResponse delegateResponse = null;
         if(method.contentEquals("GET") && delegateId != null){
             delegateResponse = _httpHelper.sendGetRequestToSingleDelegate(pathToSendRequest, headers, queryParams,delegateId,response);
         }
@@ -2545,9 +2545,9 @@ public class Delegate implements ServletContextListener {
             delegateResponse = _httpHelper.sendPatchRequestToSingleDelegate(pathToSendRequest, headers,queryParams,body,delegateId);
         }
 
-        return Response.status(Response.Status.OK)
+        return Response.status(Response.Status.fromStatusCode(delegateResponse.getStatus()))
                 .type(MediaType.APPLICATION_JSON)
-                .entity(delegateResponse)
+                .entity(delegateResponse.getData())
                 .build();
     }
 

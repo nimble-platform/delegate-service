@@ -24,6 +24,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import eu.nimble.service.delegate.DelegateResponse;
 import eu.nimble.service.delegate.businessprocess.BusinessProcessHandler;
 import eu.nimble.service.delegate.businessprocess.MergeOption;
 import org.apache.logging.log4j.LogManager;
@@ -267,7 +268,7 @@ public class HttpHelper {
         return getResponseListFromAllDelegates(endpointList, futureList);
     }
 
-    public String sendGetRequestToAllDelegates(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, MergeOption mergeOption,HttpServletResponse response) {
+    public DelegateResponse sendGetRequestToAllDelegates(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, MergeOption mergeOption,HttpServletResponse response) {
         logger.info("send get requests to all delegates");
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
@@ -288,37 +289,38 @@ public class HttpHelper {
             Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().get();
             futureList.add(result);
         }
+        String data = "";
         if(mergeOption == MergeOption.BooleanResults){
-            return BusinessProcessHandler.mergeBooleanResults(futureList);
+            data = BusinessProcessHandler.mergeBooleanResults(futureList);
         }
         else if(mergeOption == MergeOption.DoubleResults){
-            return BusinessProcessHandler.mergeDoubleResults(futureList);
+            data = BusinessProcessHandler.mergeDoubleResults(futureList);
         }
         else if(mergeOption == MergeOption.AverageResponseTimeForMonths){
-            return BusinessProcessHandler.mergeAverageResponseTimeForMonths(futureList);
+            data = BusinessProcessHandler.mergeAverageResponseTimeForMonths(futureList);
         }
         else if(mergeOption == MergeOption.RatingSummaries){
-            return BusinessProcessHandler.mergeRatingSummaries(futureList);
+            data = BusinessProcessHandler.mergeRatingSummaries(futureList);
         }
         else if(mergeOption == MergeOption.CollaborationGroups){
-            return BusinessProcessHandler.mergeCollaborationGroups(endpointList, futureList);
+            data = BusinessProcessHandler.mergeCollaborationGroups(endpointList, futureList);
         }
         else if(mergeOption == MergeOption.ProcessInstanceGroupFilter){
-            return BusinessProcessHandler.mergeProcessInstanceGroupFilters(futureList);
+            data = BusinessProcessHandler.mergeProcessInstanceGroupFilters(futureList);
         }
         else if(mergeOption == MergeOption.IndividualRatingsAndReviews){
-            return BusinessProcessHandler.mergeIndividualRatingsAndReviews(futureList);
+            data = BusinessProcessHandler.mergeIndividualRatingsAndReviews(futureList);
         }
         else if(mergeOption == MergeOption.ProcessInstanceData){
             BusinessProcessHandler.mergeProcessInstanceData(endpointList,futureList,response);
         }
         else if(mergeOption == MergeOption.OverallStatistics){
-            return BusinessProcessHandler.mergeOverallStatistics(futureList);
+            data = BusinessProcessHandler.mergeOverallStatistics(futureList);
         }
-        return "";
+        return new DelegateResponse(200,data);
     }
 
-    public String sendGetRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, String delegateId, HttpServletResponse servletResponse) {
+    public DelegateResponse sendGetRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, String delegateId, HttpServletResponse servletResponse) {
         logger.info("send get requests to single delegate: {}",delegateId);
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         Future<Response> response = null;
@@ -344,7 +346,7 @@ public class HttpHelper {
         return null;
     }
 
-    public String sendPatchRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams,String body, String delegateId) {
+    public DelegateResponse sendPatchRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams,String body, String delegateId) {
         logger.info("send patch request to single delegate: {}",delegateId);
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         Future<Response> response = null;
@@ -370,7 +372,7 @@ public class HttpHelper {
         return null;
     }
 
-    public String sendDeleteRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, String delegateId) {
+    public DelegateResponse sendDeleteRequestToSingleDelegate(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, String delegateId) {
         logger.info("send get requests to single delegates");
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         Future<Response> response = null;
@@ -436,7 +438,7 @@ public class HttpHelper {
         return getResponseListFromAllDelegates(endpointList, futureList);
     }
 
-    public String sendPostRequestToSingleDelegate( String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams,String body, String delegateId) {
+    public DelegateResponse sendPostRequestToSingleDelegate( String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams,String body, String delegateId) {
         logger.info("send post requests to single delegate");
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         Future<Response> response = null;
@@ -484,10 +486,12 @@ public class HttpHelper {
         return resList;
     }
 
-    public String getResponseFromSingleDelegate(Future<Response> response, ServiceEndpoint endpoint, HttpServletResponse servletResponse) {
+    public DelegateResponse getResponseFromSingleDelegate(Future<Response> response, ServiceEndpoint endpoint, HttpServletResponse servletResponse) {
         String data = null;
+        int status = 200;
         try {
             Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+            status = res.getStatus();
             if (res.getStatus() > 300) {
                 logger.warn("got failure status code " + res.getStatus() + " message: "+res.getEntity().toString()+" from appName:" + endpoint.getAppName() +
                         " (" + endpoint.getHostName() +
@@ -536,13 +540,15 @@ public class HttpHelper {
                     e.getMessage());
         }
 //        logger.info("aggregated results: \n" + resList.toString());
-        return data;
+        return new DelegateResponse(status,data);
     }
 
-    public String getResponseFromSingleDelegate(Future<Response> response, ServiceEndpoint endpoint) {
+    public DelegateResponse getResponseFromSingleDelegate(Future<Response> response, ServiceEndpoint endpoint) {
         String data = null;
+        int status = 200;
         try {
             Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+            status = res.getStatus();
             if (res.getStatus() > 300) {
                 logger.warn("got failure status code " + res.getStatus() + " message: "+res.getEntity().toString()+" from appName:" + endpoint.getAppName() +
                         " (" + endpoint.getHostName() +
@@ -557,6 +563,6 @@ public class HttpHelper {
                     e.getMessage());
         }
 //        logger.info("aggregated results: \n" + resList.toString());
-        return data;
+        return new DelegateResponse(status,data);
     }
 }
