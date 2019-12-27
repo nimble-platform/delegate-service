@@ -391,7 +391,7 @@ public class BusinessProcessHandler {
             String federationId = federatedCollaborationGroup.getAsJsonObject().get("federationId").getAsString();
             JsonArray object = federatedCollaborationGroup.getAsJsonObject().get("collaborationGroups").getAsJsonArray();
             if(object == null || object.size() == 0){
-                break;
+                continue;
             }
             for (JsonElement jsonElement : object) {
                 // add collaboration group to response
@@ -431,8 +431,6 @@ public class BusinessProcessHandler {
             size += groupSize;
         }
 
-        logger.info(collaborationGroupResponse.toString());
-        logger.info(size);
         PriorityQueue<JsonObject> queue = new PriorityQueue<>(new CollaborationGroupComparator());
         for (JsonElement cpr : collaborationGroupResponse) {
             queue.add(cpr.getAsJsonObject());
