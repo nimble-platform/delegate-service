@@ -1099,7 +1099,7 @@ public class Delegate implements ServletContextListener {
     @Path("/collaboration-groups/all-finished")
     public Response checkAllCollaborationsFinished(@Context HttpHeaders headers,
                                                    @QueryParam("partyId") String partyId,
-                                                   @QueryParam("collaborationRole") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
+                                                   @QueryParam("collaborationRole") @DefaultValue("SELLER") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
@@ -1111,7 +1111,7 @@ public class Delegate implements ServletContextListener {
     @Path("/collaboration-groups/all-finished/local")
     public Response checkAllCollaborationsFinishedLocal(@Context HttpHeaders headers,
                                                         @QueryParam("partyId") String partyId,
-                                                        @QueryParam("collaborationRole") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
+                                                        @QueryParam("collaborationRole") @DefaultValue("SELLER") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -1360,7 +1360,7 @@ public class Delegate implements ServletContextListener {
                                                    @QueryParam("federationId") List<String> federationId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("groupId", getStringQueryParam(groupId));
+        queryParams.put("id", getStringQueryParam(groupId));
         queryParams.put("federationId", getStringQueryParam(federationId));
         return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_FEDERATED_COLLABORATION_GROUP_LOCAL_PATH, queryParams,null, MergeOption.CollaborationGroups);
     }
@@ -1375,7 +1375,7 @@ public class Delegate implements ServletContextListener {
         }
 
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("groupId", getStringQueryParam(groupId));
+        queryParams.put("id", getStringQueryParam(groupId));
         queryParams.put("federationId", getStringQueryParam(federationId));
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port,_businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_FEDERATED_COLLABORATION_GROUP_PATH, queryParams);
 
