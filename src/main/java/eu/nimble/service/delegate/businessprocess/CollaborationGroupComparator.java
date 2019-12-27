@@ -16,8 +16,6 @@ public class CollaborationGroupComparator implements Comparator<JsonObject> {
 
     public int compare(JsonObject str1, JsonObject str2)
     {
-        System.out.println("String 1 to compare:" + str1);
-        System.out.println("String 2 to compare:" + str2);
         LocalDateTime first_Str;
         LocalDateTime second_Str;
         first_Str = getLastActivityTimeForCollaboration(str1);
