@@ -31,6 +31,7 @@ import javax.ws.rs.core.Response;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletContextEvent;
 
+import java.net.URLEncoder;
 import java.util.*;
 import java.io.IOException;
 import java.net.URI;
@@ -784,8 +785,8 @@ public class Delegate implements ServletContextListener {
                                           @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("ratings", ratingsString);
-        queryParams.put("reviews", reviewsString);
+        queryParams.put("ratings", URLEncoder.encode(ratingsString,"UTF-8"));
+        queryParams.put("reviews", URLEncoder.encode(reviewsString,"UTF-8"));
         queryParams.put("partyId", partyId);
         queryParams.put("processInstanceID", processInstanceID);
         return businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.CREATE_RATINGS_AND_REVIEWS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),delegateId);
@@ -803,8 +804,8 @@ public class Delegate implements ServletContextListener {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("ratings", ratingsString);
-        queryParams.put("reviews", reviewsString);
+        queryParams.put("ratings", URLEncoder.encode(ratingsString,"UTF-8"));
+        queryParams.put("reviews", URLEncoder.encode(reviewsString,"UTF-8"));
         queryParams.put("partyId", partyId);
         queryParams.put("processInstanceID", processInstanceID);
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.CREATE_RATINGS_AND_REVIEWS_PATH, queryParams);
@@ -1678,23 +1679,23 @@ public class Delegate implements ServletContextListener {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/process-instance-groups/order-document")
     public Response getOrderDocument(@Context HttpHeaders headers,
-                                     @QueryParam("processInstanceID") String processInstanceID,
+                                     @QueryParam("processInstanceId") String processInstanceId,
                                      @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("processInstanceID", processInstanceID);
+        queryParams.put("processInstanceId", processInstanceId);
         return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_ORDER_DOCUMENT_LOCAL_PATH, queryParams,null,delegateId);
     }
 
     @GET
     @Path("/process-instance-groups/order-document/local")
     public Response getOrderDocumentLocal(@Context HttpHeaders headers,
-                                          @QueryParam("processInstanceID") String processInstanceID) throws JsonParseException, JsonMappingException, IOException {
+                                          @QueryParam("processInstanceId") String processInstanceId) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("processInstanceID", processInstanceID);
+        queryParams.put("processInstanceId", processInstanceId);
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_ORDER_DOCUMENT_PATH, queryParams);
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
@@ -1963,12 +1964,11 @@ public class Delegate implements ServletContextListener {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/contract/digital-agreement/all")
     public Response getDigitalAgreementForPartiesAndProductAll(@Context HttpHeaders headers,
-                                                               @QueryParam("partyId") String partyId,
-                                                               @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+                                                               @QueryParam("partyId") String partyId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId",partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),delegateId);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),MergeOption.FrameContract);
     }
 
     @GET

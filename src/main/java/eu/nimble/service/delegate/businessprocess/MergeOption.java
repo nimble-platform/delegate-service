@@ -9,5 +9,6 @@ public enum MergeOption {
     IndividualRatingsAndReviews,
     ProcessInstanceData,
     OverallStatistics,
-    AverageResponseTimeForMonths
+    AverageResponseTimeForMonths,
+    FrameContract
 }

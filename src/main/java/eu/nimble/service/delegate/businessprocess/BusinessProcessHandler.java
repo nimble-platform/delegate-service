@@ -556,6 +556,38 @@ public class BusinessProcessHandler {
         return jsonArray.toString();
     }
 
+    public static String mergeFrameContracts(List<Future<Response>> futureList){
+        JsonArray jsonArray = new JsonArray();
+
+        JsonParser jsonParser = new JsonParser();
+
+        // Wait (one by one) for the responses from all the services
+        for(int i = 0; i< futureList.size(); i++) {
+            Future<Response> response = futureList.get(i);
+            try {
+                Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
+                if (res.getStatus() > 300) {
+//                    logger.warn("got failure status code " + res.getStatus() + " from appName:" + endpoint.getAppName() +
+//                            " (" + endpoint.getHostName() +
+//                            ":" + endpoint.getPort() + ")");
+                    continue;
+                }
+                String data = res.readEntity(String.class);
+                JsonArray frameContracts = (JsonArray) jsonParser.parse(data);
+                for (JsonElement frameContract : frameContracts) {
+                    jsonArray.add(frameContract);
+                }
+            } catch(Exception e) {
+//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                        " appName:" + endpoint.getAppName() +
+//                        " (" + endpoint.getHostName() +
+//                        ":" + endpoint.getPort() + ") - " +
+//                        e.getMessage());
+            }
+        }
+        return jsonArray.toString();
+    }
+
     public static void mergeProcessInstanceData(List<ServiceEndpoint> endpointList,List<Future<Response>> futureList, HttpServletResponse response){
         ZipOutputStream zos = null;
         try{

@@ -317,6 +317,9 @@ public class HttpHelper {
         else if(mergeOption == MergeOption.OverallStatistics){
             data = BusinessProcessHandler.mergeOverallStatistics(futureList);
         }
+        else if(mergeOption == MergeOption.FrameContract){
+            data = BusinessProcessHandler.mergeFrameContracts(futureList);
+        }
         return new DelegateResponse(200,data);
     }
 
