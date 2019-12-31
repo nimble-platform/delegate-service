@@ -80,6 +80,8 @@ public class BusinessProcessHandler {
     public static String GET_AVERAGE_COLLABORATION_TIME_LOCAL_PATH= "/statistics/collaboration-time/local";
     public static String GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_PATH= "/statistics/response-time-months";
     public static String GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH= "/statistics/response-time-months/local";
+    public static String GET_FULFILMENT_STATISTICS_PATH= "/statistics/fulfilment";
+    public static String GET_FULFILMENT_STATISTICS_LOCAL_PATH= "/statistics/fulfilment/local";
     public static String GET_RATING_SUMMARY_PATH= "/ratingsSummary";
     public static String GET_RATING_SUMMARY_LOCAL_PATH= "/ratingsSummary/local";
     public static String GET_FEDERATED_COLLABORATION_GROUP_PATH= "/collaboration-groups/federated";

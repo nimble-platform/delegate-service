@@ -2412,6 +2412,35 @@ public class Delegate implements ServletContextListener {
     }
     /************************************   /statistics/response-time-months - END   ************************************/
 
+    /****************************************   /statistics/fulfilment   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/statistics/fulfilment")
+    public Response getFulfilmentStatistics(@Context HttpHeaders headers,@QueryParam("orderId") String orderId,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated payment done");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("orderId", orderId);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),BusinessProcessHandler.GET_FULFILMENT_STATISTICS_LOCAL_PATH, queryParams,null,delegateId);
+    }
+
+    @GET
+    @Path("/statistics/fulfilment/local")
+    public Response getFulfilmentStatisticsLocal(@Context HttpHeaders headers, @QueryParam("orderId") String orderId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("orderId", orderId);
+
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_FULFILMENT_STATISTICS_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_FULFILMENT_STATISTICS_LOCAL_PATH, businessProcessServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /statistics/fulfilment - END   ************************************/
+
     /************************************************   BUSINESS PROCESS SERVICE - END   ************************************************/
 
     /***********************************   business-process-service - helper function   ***********************************/
