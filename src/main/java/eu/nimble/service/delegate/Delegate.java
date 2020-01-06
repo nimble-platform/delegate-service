@@ -1727,22 +1727,30 @@ public class Delegate implements ServletContextListener {
     @Path("/process-instance-groups/order-document")
     public Response getOrderDocument(@Context HttpHeaders headers,
                                      @QueryParam("processInstanceId") String processInstanceId,
+                                     @QueryParam("orderResponseId") String orderResponseId,
                                      @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("processInstanceId", processInstanceId);
+        if(orderResponseId != null){
+            queryParams.put("orderResponseId", orderResponseId);
+        }
         return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_ORDER_DOCUMENT_LOCAL_PATH, queryParams,null,delegateId);
     }
 
     @GET
     @Path("/process-instance-groups/order-document/local")
     public Response getOrderDocumentLocal(@Context HttpHeaders headers,
-                                          @QueryParam("processInstanceId") String processInstanceId) throws JsonParseException, JsonMappingException, IOException {
+                                          @QueryParam("processInstanceId") String processInstanceId,
+                                          @QueryParam("orderResponseId") String orderResponseId) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("processInstanceId", processInstanceId);
+        if(orderResponseId != null){
+            queryParams.put("orderResponseId", orderResponseId);
+        }
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_ORDER_DOCUMENT_PATH, queryParams);
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
@@ -2488,6 +2496,103 @@ public class Delegate implements ServletContextListener {
     }
     /************************************   /statistics/fulfilment - END   ************************************/
 
+    /****************************************   /contracts/terms-and-conditions   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/contracts/terms-and-conditions")
+    public Response getTermsAndConditions(@Context HttpHeaders headers,
+                                          @QueryParam("sellerPartyId") String sellerPartyId,
+                                          @QueryParam("buyerPartyId") String buyerPartyId,
+                                          @QueryParam("incoterms") String incoterms,
+                                          @QueryParam("tradingTerm") String tradingTerm,
+                                          @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated payment done");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if(sellerPartyId != null){
+            queryParams.put("sellerPartyId", sellerPartyId);
+        }
+        if(buyerPartyId != null){
+            queryParams.put("buyerPartyId", buyerPartyId);
+        }
+        if(incoterms != null){
+            queryParams.put("incoterms", incoterms);
+        }
+        if(tradingTerm != null){
+            queryParams.put("tradingTerm", tradingTerm);
+        }
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),BusinessProcessHandler.GET_TERMS_AND_CONDITIONS_LOCAL_PATH,queryParams,null,headers.getHeaderString("initiatorFederationId"),null,delegateId);
+    }
+
+    @GET
+    @Path("/contracts/terms-and-conditions/local")
+    public Response getTermsAndConditionsLocal(@Context HttpHeaders headers,
+                                               @QueryParam("sellerPartyId") String sellerPartyId,
+                                               @QueryParam("buyerPartyId") String buyerPartyId,
+                                               @QueryParam("incoterms") String incoterms,
+                                               @QueryParam("tradingTerm") String tradingTerm) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if(sellerPartyId != null){
+            queryParams.put("sellerPartyId", sellerPartyId);
+        }
+        if(buyerPartyId != null){
+            queryParams.put("buyerPartyId", buyerPartyId);
+        }
+        if(incoterms != null){
+            queryParams.put("incoterms", incoterms);
+        }
+        if(tradingTerm != null){
+            queryParams.put("tradingTerm", tradingTerm);
+        }
+
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_TERMS_AND_CONDITIONS_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        headersToSend.add("initiatorFederationId",headers.getHeaderString("initiatorFederationId"));
+
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_TERMS_AND_CONDITIONS_LOCAL_PATH, businessProcessServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /contracts/terms-and-conditions - END   ************************************/
+
+    /****************************************   /rest/engine/default/history/variable-instance   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/rest/engine/default/history/variable-instance")
+    public Response getProcessDetailsHistory(@Context HttpHeaders headers,
+                                             @QueryParam("processInstanceIdIn") String processInstanceIdIn,
+                                             @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated payment done");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if(processInstanceIdIn != null){
+            queryParams.put("processInstanceIdIn", processInstanceIdIn);
+        }
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),BusinessProcessHandler.GET_PROCESS_DETAILS_HISTORY_LOCAL_PATH,queryParams,null,delegateId);
+    }
+
+    @GET
+    @Path("/rest/engine/default/history/variable-instance/local")
+    public Response getProcessDetailsHistoryLocal(@Context HttpHeaders headers,
+                                                  @QueryParam("processInstanceIdIn") String processInstanceIdIn) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if(processInstanceIdIn != null){
+            queryParams.put("processInstanceIdIn", processInstanceIdIn);
+        }
+
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_PROCESS_DETAILS_HISTORY_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_PROCESS_DETAILS_HISTORY_LOCAL_PATH, businessProcessServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /rest/engine/default/history/variable-instance - END   ************************************/
+
     /************************************************   BUSINESS PROCESS SERVICE - END   ************************************************/
 
     /***********************************   business-process-service - helper function   ***********************************/
@@ -2595,8 +2700,10 @@ public class Delegate implements ServletContextListener {
         if(federationIdHeader != null){
             headers.add("federationId", federationIdHeader);
         }
-        if(initiatorFederationIdHeader != null && responderFederationIdHeader != null){
+        if(initiatorFederationIdHeader != null){
             headers.add("initiatorFederationId",initiatorFederationIdHeader);
+        }
+        if(responderFederationIdHeader != null){
             headers.add("responderFederationId",responderFederationIdHeader);
         }
 

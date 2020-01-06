@@ -140,6 +140,10 @@ public class BusinessProcessHandler {
     public static String FINISH_COLLABORATION_LOCAL_PATH= "/process-instance-groups/%s/finish/local";
     public static String GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_PATH= "/processInstance/document/%s";
     public static String GET_PROCESS_INSTANCE_ID_FOR_DOCUMENT_LOCAL_PATH= "/processInstance/document/%s/local";
+    public static String GET_TERMS_AND_CONDITIONS_PATH= "/contracts/terms-and-conditions";
+    public static String GET_TERMS_AND_CONDITIONS_LOCAL_PATH= "/contracts/terms-and-conditions/local";
+    public static String GET_PROCESS_DETAILS_HISTORY_PATH= "/rest/engine/default/history/variable-instance";
+    public static String GET_PROCESS_DETAILS_HISTORY_LOCAL_PATH= "/rest/engine/default/history/variable-instance/local";
 
     public String BaseUrl;
     public int Port;
