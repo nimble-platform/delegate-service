@@ -2749,4 +2749,88 @@ public class Delegate implements ServletContextListener {
         return queryParam.toString();
     }
     /***********************************   business-process-service - helper function - END   ***********************************/
+
+    /***************************************************   IDENTITY SERVICE   ***************************************************/
+
+    /****************************************   /company-settings/{companyID}   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/company-settings/{companyID}")
+    public Response getSettings(@Context HttpHeaders headers,@PathParam("companyID") Long companyID,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get settings");
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_COMPANY_SETTINGS_LOCAL_PATH,companyID), null,null,delegateId);
+    }
+
+    @GET
+    @Path("/company-settings/{companyID}/local")
+    public Response getSettingsLocal(@Context HttpHeaders headers, @PathParam("companyID") Long companyID) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_COMPANY_SETTINGS_PATH,companyID), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IdentityHandler.GET_COMPANY_SETTINGS_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /company-settings/{companyID} - END   ************************************/
+
+    /****************************************   /company-settings/{companyID}/negotiation/   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/company-settings/{companyID}/negotiation/")
+    public Response getNegotiationSettings(@Context HttpHeaders headers,@PathParam("companyID") Long companyID,@QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get settings");
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_NEGOTIATION_SETTINGS_LOCAL_PATH,companyID), null,null,delegateId);
+    }
+
+    @GET
+    @Path("/company-settings/{companyID}/negotiation/local")
+    public Response getNegotiationSettingsLocal(@Context HttpHeaders headers, @PathParam("companyID") Long companyID) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_NEGOTIATION_SETTINGS_PATH,companyID), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IdentityHandler.GET_NEGOTIATION_SETTINGS_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /company-settings/{companyID}/negotiation/ - END   ************************************/
+
+    /****************************************   /party/{partyId}   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/party/{partyId}")
+    public Response getParty(@Context HttpHeaders headers, @PathParam("partyId") Long partyId, @QueryParam("includeRoles") boolean includeRoles, @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get settings");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("includeRoles", String.valueOf(includeRoles));
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_PARTY_LOCAL_PATH,partyId), queryParams,null,delegateId);
+    }
+
+    @GET
+    @Path("/party/{partyId}/local")
+    public Response getPartyLocal(@Context HttpHeaders headers,@PathParam("partyId") Long partyId,@QueryParam("includeRoles") boolean includeRoles) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("includeRoles", String.valueOf(includeRoles));
+
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_PARTY_PATH,partyId), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IdentityHandler.GET_PARTY_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /party/{partyId} - END   ************************************/
+
+    /***************************************************   IDENTITY SERVICE - END   ***************************************************/
 }
