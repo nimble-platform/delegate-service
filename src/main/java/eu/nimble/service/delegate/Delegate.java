@@ -621,7 +621,7 @@ public class Delegate implements ServletContextListener {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/binary-contents")
-    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) {
+    public Response getBinaryContents(@Context HttpHeaders headers, @QueryParam("uris") List<String> uris) throws IOException {
         logger.info("called federated get binary contents (catalog service call)");
         // validation check of the authorization header in the local identity service
         if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
@@ -633,16 +633,18 @@ public class Delegate implements ServletContextListener {
         }
         logger.info("query params: " + queryParams.toString());
 
-        // TODO change and send to all delegates
-        ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(headers.getHeaderString("nimbleInstanceName"));
-        URI targetUri = _httpHelper.buildUri(nimbleInfo.getHostName(), nimbleInfo.getPort(), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams);
+//        // TODO change and send to all delegates
+//        ServiceEndpoint nimbleInfo = _eurekaHandler.getEndpointByAppName(headers.getHeaderString("nimbleInstanceName"));
+//        URI targetUri = _httpHelper.buildUri(nimbleInfo.getHostName(), nimbleInfo.getPort(), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams);
+//
+//        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+//        //TODO change to real token _identityFederationHandler.getAccessToken()
+//        headersToSend.add(HttpHeaders.AUTHORIZATION, "delegate access token in the federation identity service");
+//
+//        // TODO send to all delegates and aggregate results
+//        return _httpHelper.sendGetRequest(targetUri, headersToSend);
 
-        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
-        //TODO change to real token _identityFederationHandler.getAccessToken()
-        headersToSend.add(HttpHeaders.AUTHORIZATION, "delegate access token in the federation identity service");
-
-        // TODO send to all delegates and aggregate results
-        return _httpHelper.sendGetRequest(targetUri, headersToSend);
+        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams,true);
     }
 
     // a REST call that should be used between delegates.
@@ -653,9 +655,9 @@ public class Delegate implements ServletContextListener {
         if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-        queryParams.put("uris", uris);
-        URI uri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENTS_PATH, queryParams);
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("uris", getStringQueryParam(uris));
+        URI uri = _httpHelper.buildUriWithStringParams(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_BINARY_CONTENTS_PATH, queryParams);
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
