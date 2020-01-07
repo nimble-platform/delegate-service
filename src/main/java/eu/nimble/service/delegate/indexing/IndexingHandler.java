@@ -181,11 +181,10 @@ public class IndexingHandler {
     	return false;
     }
     
-    public Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceRelativePath) {
+    public Set<String> getLocalFieldNamesFromIndexingSerivce(String indexingServiceRelativePath,MultivaluedMap<String, Object> headers) {
     	URI uri = _httpHelper.buildUri(BaseUrl, Port, indexingServiceRelativePath, null);
         logger.info("sending a request to " + uri.toString() + " in order to clean non existing field names");
-        
-        Response response = _httpHelper.sendGetRequest(uri, null);
+		Response response = _httpHelper.sendGetRequest(uri, headers);
         if (response.getStatus() >= 400) { // we had an issue, we can't modify the body without any response
         	logger.warn("get error when calling GET '/item/fields' in indexing service");
         	return new HashSet<String>();

@@ -183,7 +183,7 @@ public class Delegate implements ServletContextListener {
     // the origin delegate sends a request and the target delegate will perform the query locally.
     @GET
     @Path("/item/fields/local")
-    public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    public Response getItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws IOException {
         if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -191,7 +191,10 @@ public class Delegate implements ServletContextListener {
         queryParams.put("fieldName", fieldName);
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH, queryParams);
 
-        return _httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_ITEM_FIELDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/item/fields - END   ***********************************/
 
@@ -222,7 +225,7 @@ public class Delegate implements ServletContextListener {
     // the origin delegate sends a request and the target delegate will perform the query locally.
     @GET
     @Path("/party/fields/local")
-    public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) {
+    public Response getPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws IOException {
         if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -230,7 +233,10 @@ public class Delegate implements ServletContextListener {
         queryParams.put("fieldName", fieldName);
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH, queryParams);
 
-        return _httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), null, _frontendServiceUrl);
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IndexingHandler.GET_PARTY_FIELDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/party/fields - END   ***********************************/
 
@@ -265,12 +271,14 @@ public class Delegate implements ServletContextListener {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/item/search/local")
-    public Response postItemSearch(@Context HttpHeaders headers, Map<String, Object> body) {
+    public Response postItemSearch(@Context HttpHeaders headers, Map<String, Object> body) throws IOException {
         if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         // if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-        Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(_indexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH);
+        Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(_indexingHandler.PathPrefix+IndexingHandler.GET_ITEM_FIELDS_PATH,headersToSend);
         if (_indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
             return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
         }
@@ -279,7 +287,6 @@ public class Delegate implements ServletContextListener {
 
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
 
-        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add("Content-Type", "application/json");
 
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
@@ -325,12 +332,16 @@ public class Delegate implements ServletContextListener {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/party/search/local")
-    public Response postPartySearch(@Context HttpHeaders headers, Map<String, Object> body) {
+    public Response postPartySearch(@Context HttpHeaders headers, Map<String, Object> body) throws IOException {
         if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
         // if fq list in the request body contains field name that doesn't exist in local instance don't do any search, return empty result
-        Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(_indexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH);
+        Set<String> localFieldNames = _indexingHandler.getLocalFieldNamesFromIndexingSerivce(_indexingHandler.PathPrefix+IndexingHandler.GET_PARTY_FIELDS_PATH,headersToSend);
         if (_indexingHandler.fqListContainNonLocalFieldName(body, localFieldNames)) {
             return Response.status(Response.Status.OK).type(MediaType.TEXT_PLAIN).entity("").build();
         }
@@ -339,7 +350,6 @@ public class Delegate implements ServletContextListener {
 
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.POST_PARTY_SEARCH_PATH, null);
 
-        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add("Content-Type", "application/json");
 
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_PARTY_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
