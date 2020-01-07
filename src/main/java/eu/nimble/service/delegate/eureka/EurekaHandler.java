@@ -76,6 +76,10 @@ public class EurekaHandler {
     public String getId() {
     	return applicationInfoManager.getInfo().getId();
     }
+
+    public String getAppName() {
+        return applicationInfoManager.getInfo().getAppName();
+    }
     
     public void destroy() {
     	logger.info("setting eureka instance status to DOWN");

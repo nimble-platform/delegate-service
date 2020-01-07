@@ -194,7 +194,7 @@ public class BusinessProcessHandler {
                     return "false";
                 }
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -221,7 +221,7 @@ public class BusinessProcessHandler {
                 String data = res.readEntity(String.class);
                 result += Double.parseDouble(data);
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -331,7 +331,7 @@ public class BusinessProcessHandler {
                 listingAccuracy += object.get("listingAccuracy").getAsInt();
                 conformanceToContractualTerms += object.get("conformanceToContractualTerms").getAsInt();
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -368,13 +368,13 @@ public class BusinessProcessHandler {
                 String data = res.readEntity(String.class);
 
                 JsonObject jsonObject = new JsonObject();
-                jsonObject.addProperty("federationId",endpoint.getId());
+                jsonObject.addProperty("federationId",endpoint.getAppName());
                 jsonObject.add("collaborationGroups",parser.parse(data));
 
                 jsonArray.add(jsonObject);
             } catch(Exception e) {
                 logger.warn("Exception here:{}",e.getMessage());
-                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
                         " appName:" + endpoint.getAppName() +
                         " (" + endpoint.getHostName() +
                         ":" + endpoint.getPort() + ") - " +
@@ -516,7 +516,7 @@ public class BusinessProcessHandler {
                     }
                 }
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -554,7 +554,7 @@ public class BusinessProcessHandler {
                 JsonArray individualReviewsAndRatings = jsonParser.parse(data).getAsJsonArray();
                 jsonArray.addAll(individualReviewsAndRatings);
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -586,7 +586,7 @@ public class BusinessProcessHandler {
                     jsonArray.add(element);
                 }
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -625,7 +625,7 @@ public class BusinessProcessHandler {
                 try {
                     data = res.readEntity(InputStream.class);
 
-                    zos.putNextEntry(new ZipEntry("transactions_" + endpointList.get(i).getId() + ".zip"));
+                    zos.putNextEntry(new ZipEntry("transactions_" + endpointList.get(i).getAppName() + ".zip"));
                     byte[] buffer = new byte[1024];
                     int bytesRead;
                     while ((bytesRead = data.read(buffer)) != -1) {
@@ -648,7 +648,7 @@ public class BusinessProcessHandler {
 
         }catch (Exception e){
             logger.error("Exception while merging results:",e);
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +
@@ -703,7 +703,7 @@ public class BusinessProcessHandler {
                 totalNumberOfTransaction += numberOfTransactions;
                 totalTradingVolume += tradingVolume;
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
 //                        ":" + endpoint.getPort() + ") - " +

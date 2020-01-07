@@ -274,7 +274,7 @@ public class HttpHelper {
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
-            if(delegateIds == null || delegateIds.contains(endpoint.getId())){
+            if(delegateIds == null || delegateIds.contains(endpoint.getAppName())){
                 // Prepare the destination URL
                 UriBuilder uriBuilder = UriBuilder.fromUri("");
                 uriBuilder.scheme("http");
@@ -331,7 +331,7 @@ public class HttpHelper {
         Future<Response> response = null;
 
         for (ServiceEndpoint endpoint : endpointList) {
-            if(endpoint.getId().contentEquals(delegateId)){
+            if(endpoint.getAppName().contentEquals(delegateId)){
                 // Prepare the destination URL
                 UriBuilder uriBuilder = UriBuilder.fromUri("");
                 uriBuilder.scheme("http");
@@ -357,7 +357,7 @@ public class HttpHelper {
         Future<Response> response = null;
 
         for (ServiceEndpoint endpoint : endpointList) {
-            if(endpoint.getId().contentEquals(delegateId)){
+            if(endpoint.getAppName().contentEquals(delegateId)){
                 // Prepare the destination URL
                 UriBuilder uriBuilder = UriBuilder.fromUri("");
                 uriBuilder.scheme("http");
@@ -383,7 +383,7 @@ public class HttpHelper {
         Future<Response> response = null;
 
         for (ServiceEndpoint endpoint : endpointList) {
-            if(endpoint.getId().contentEquals(delegateId)){
+            if(endpoint.getAppName().contentEquals(delegateId)){
                 // Prepare the destination URL
                 UriBuilder uriBuilder = UriBuilder.fromUri("");
                 uriBuilder.scheme("http");
@@ -409,7 +409,7 @@ public class HttpHelper {
 //        Future<Response> response = null;
 //
 //        for (ServiceEndpoint endpoint : endpointList) {
-//            if(endpoint.getId().contentEquals(delegateId)){
+//            if(endpoint.getAppName().contentEquals(delegateId)){
 //                // Prepare the destination URL
 //                UriBuilder uriBuilder = UriBuilder.fromUri("");
 //                uriBuilder.scheme("http");
@@ -449,7 +449,7 @@ public class HttpHelper {
         Future<Response> response = null;
 
         for (ServiceEndpoint endpoint : endpointList) {
-            if(endpoint.getId().contentEquals(delegateId)){
+            if(endpoint.getAppName().contentEquals(delegateId)){
                 URI uri = buildUriWithStringParams(endpoint.getHostName(), endpoint.getPort(), urlPath, queryParams);
                 logger.info("sending the request to " + endpoint.toString() + "...");
                 Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().post(Entity.json(body));
@@ -480,7 +480,7 @@ public class HttpHelper {
                 endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
                 resList.put(endpoint, data);
             } catch(Exception e) {
-                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
                         " appName:" + endpoint.getAppName() +
                         " (" + endpoint.getHostName() +
                         ":" + endpoint.getPort() + ") - " +
@@ -538,7 +538,7 @@ public class HttpHelper {
                 }
             }
         } catch(Exception e) {
-            logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+            logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
                     " appName:" + endpoint.getAppName() +
                     " (" + endpoint.getHostName() +
                     ":" + endpoint.getPort() + ") - " +
@@ -561,7 +561,7 @@ public class HttpHelper {
             }
             data = res.readEntity(String.class);
         } catch(Exception e) {
-            logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +
+            logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
                     " appName:" + endpoint.getAppName() +
                     " (" + endpoint.getHostName() +
                     ":" + endpoint.getPort() + ") - " +
