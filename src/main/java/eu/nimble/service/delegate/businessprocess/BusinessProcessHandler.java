@@ -144,6 +144,8 @@ public class BusinessProcessHandler {
     public static String GET_TERMS_AND_CONDITIONS_LOCAL_PATH= "/contracts/terms-and-conditions/local";
     public static String GET_PROCESS_DETAILS_HISTORY_PATH= "/rest/engine/default/history/variable-instance";
     public static String GET_PROCESS_DETAILS_HISTORY_LOCAL_PATH= "/rest/engine/default/history/variable-instance/local";
+    public static String GET_EXPECTED_ORDERS_PATH = "/documents/expected-orders";
+    public static String GET_EXPECTED_ORDERS_LOCAL_PATH = "/documents/expected-orders/local";
 
     public String BaseUrl;
     public int Port;
@@ -562,7 +564,7 @@ public class BusinessProcessHandler {
         return jsonArray.toString();
     }
 
-    public static String mergeFrameContracts(List<Future<Response>> futureList){
+    public static String mergeListResults(List<Future<Response>> futureList){
         JsonArray jsonArray = new JsonArray();
 
         JsonParser jsonParser = new JsonParser();
@@ -579,9 +581,9 @@ public class BusinessProcessHandler {
                     continue;
                 }
                 String data = res.readEntity(String.class);
-                JsonArray frameContracts = (JsonArray) jsonParser.parse(data);
-                for (JsonElement frameContract : frameContracts) {
-                    jsonArray.add(frameContract);
+                JsonArray elements = (JsonArray) jsonParser.parse(data);
+                for (JsonElement element : elements) {
+                    jsonArray.add(element);
                 }
             } catch(Exception e) {
 //                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getId() +

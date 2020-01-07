@@ -268,26 +268,28 @@ public class HttpHelper {
         return getResponseListFromAllDelegates(endpointList, futureList);
     }
 
-    public DelegateResponse sendGetRequestToAllDelegates(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, MergeOption mergeOption,HttpServletResponse response) {
+    public DelegateResponse sendGetRequestToAllDelegates(String urlPath, MultivaluedMap<String, Object> headers, HashMap<String, String> queryParams, MergeOption mergeOption,HttpServletResponse response,List<String> delegateIds) {
         logger.info("send get requests to all delegates");
         List<ServiceEndpoint> endpointList = eurekaHandler.getEndpointsFromEureka();
         List<Future<Response>> futureList = new ArrayList<Future<Response>>();
 
         for (ServiceEndpoint endpoint : endpointList) {
-            // Prepare the destination URL
-            UriBuilder uriBuilder = UriBuilder.fromUri("");
-            uriBuilder.scheme("http");
-            // add all query params to the request
-            if (queryParams != null) {
-                for (Entry<String, String> queryParam : queryParams.entrySet()) {
-                    uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
+            if(delegateIds == null || delegateIds.contains(endpoint.getId())){
+                // Prepare the destination URL
+                UriBuilder uriBuilder = UriBuilder.fromUri("");
+                uriBuilder.scheme("http");
+                // add all query params to the request
+                if (queryParams != null) {
+                    for (Entry<String, String> queryParam : queryParams.entrySet()) {
+                        uriBuilder.queryParam(queryParam.getKey(), queryParam.getValue());
+                    }
                 }
-            }
-            URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
+                URI uri = uriBuilder.host(endpoint.getHostName()).port(endpoint.getPort()).path(urlPath).build();
 
-            logger.info("sending the request to " + endpoint.toString() + "...");
-            Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().get();
-            futureList.add(result);
+                logger.info("sending the request to " + endpoint.toString() + "...");
+                Future<Response> result = httpClient.target(uri.toString()).request().headers(headers).async().get();
+                futureList.add(result);
+            }
         }
         String data = "";
         if(mergeOption == MergeOption.BooleanResults){
@@ -317,8 +319,8 @@ public class HttpHelper {
         else if(mergeOption == MergeOption.OverallStatistics){
             data = BusinessProcessHandler.mergeOverallStatistics(futureList);
         }
-        else if(mergeOption == MergeOption.FrameContract){
-            data = BusinessProcessHandler.mergeFrameContracts(futureList);
+        else if(mergeOption == MergeOption.ListResults){
+            data = BusinessProcessHandler.mergeListResults(futureList);
         }
         return new DelegateResponse(200,data);
     }

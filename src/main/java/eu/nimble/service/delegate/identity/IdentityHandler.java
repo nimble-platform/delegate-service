@@ -44,6 +44,8 @@ public class IdentityHandler {
 	public static String GET_NEGOTIATION_SETTINGS_LOCAL_PATH= "/company-settings/%s/negotiation/local";
 	public static String GET_PARTY_PATH= "/party/%s";
 	public static String GET_PARTY_LOCAL_PATH= "/party/%s/local";
+	public static String GET_PARTIES_PATH= "/parties/%s";
+	public static String GET_PARTIES_LOCAL_PATH= "/parties/%s/local";
 
 	public IdentityHandler(HttpHelper httpHelper, String baseUrl, int port, String pathPrefix, String username, String password) {
 		_baseUrl = baseUrl;

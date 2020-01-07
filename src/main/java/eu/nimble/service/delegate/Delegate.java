@@ -402,6 +402,66 @@ public class Delegate implements ServletContextListener {
     }
     /***********************************   catalog-service/catalogueline/{hjid} - END   ***********************************/
 
+    /***********************************   /cataloguelines   ***********************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/cataloguelines")
+    public Response getCatalogueLinesByHjids(@QueryParam("ids") List<String> hjid,
+                                             @QueryParam("limit") Integer limit,
+                                             @QueryParam("offset") Integer offset,
+                                             @QueryParam("sortOption") String sortOption,
+                                             @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get catalog line by hjid (catalog service call)");
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        if (hjid != null) {
+            queryParams.put("ids", hjid);
+        }
+        if (limit != null) {
+            queryParams.put("limit", Arrays.asList(limit.toString()));
+        }
+        if (offset != null) {
+            queryParams.put("offset", Arrays.asList(offset.toString()));
+        }
+        if (sortOption != null) {
+            queryParams.put("sortOption", Arrays.asList(sortOption));
+        }
+        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH, queryParams,true);
+    }
+
+    // a REST call that should be used between delegates.
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    @GET
+    @Path("/cataloguelines/local")
+    public Response getCatalogueLinesByHjidsLocal(@QueryParam("ids") List<String> hjid,
+                                                  @QueryParam("limit") Integer limit,
+                                                  @QueryParam("offset") Integer offset,
+                                                  @QueryParam("sortOption") String sortOption,
+                                                  @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
+        if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if (hjid != null) {
+            queryParams.put("ids", getStringQueryParam(hjid));
+        }
+        if (limit != null) {
+            queryParams.put("limit", limit.toString());
+        }
+        if (offset != null) {
+            queryParams.put("offset", offset.toString());
+        }
+        if (sortOption != null) {
+            queryParams.put("sortOption", sortOption);
+        }
+        URI uri = _httpHelper.buildUriWithStringParams(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /***********************************   /cataloguelines - END   ***********************************/
+
     /******************************   catalog-service/catalogue/{catalogueUuid}/catalogueline/{lineId}   ******************************/
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -596,6 +656,9 @@ public class Delegate implements ServletContextListener {
 
     /***********************************   catalog-service - helper function   ***********************************/
     private Response catalogServiceCallWrapper(String userAccessToken, String pathToSendRequest, HashMap<String, List<String>> queryParams) throws JsonParseException, JsonMappingException, IOException {
+        return catalogServiceCallWrapper(userAccessToken,pathToSendRequest,queryParams,false);
+    }
+    private Response catalogServiceCallWrapper(String userAccessToken, String pathToSendRequest, HashMap<String, List<String>> queryParams,Boolean mergeResponses) throws JsonParseException, JsonMappingException, IOException {
         // validation check of the authorization header in the local identity service
         if (_identityLocalHandler.userExist(userAccessToken) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -608,6 +671,12 @@ public class Delegate implements ServletContextListener {
         headers.add(HttpHeaders.AUTHORIZATION, _identityFederationHandler.getAccessToken());
 
         HashMap<ServiceEndpoint, String> delegatesResponse = _httpHelper.sendGetRequestToAllDelegates(pathToSendRequest, headers, queryParams);
+        if(mergeResponses){
+            return Response.status(Response.Status.OK)
+                    .type(MediaType.APPLICATION_JSON)
+                    .entity(CatalogHandler.mergeListResults(delegatesResponse))
+                    .build();
+        }
         return _catalogHandler.buildResponseFromSingleDelegate(delegatesResponse);
     }
     /***********************************   catalog-service - helper function - END   ***********************************/
@@ -2023,7 +2092,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId",partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),MergeOption.FrameContract);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),MergeOption.ListResults);
     }
 
     @GET
@@ -2242,6 +2311,39 @@ public class Delegate implements ServletContextListener {
         return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.MERGE_COLLABORATION_GROUPS_LOCAL_PATH, businessProcessServiceUri.toString(),body, headersToSend ,_frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
+
+    /****************************************   /documents/expected-orders   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/documents/expected-orders")
+    public Response getExpectedOrders(@Context HttpHeaders headers,
+                                                             @QueryParam("forAll") @DefaultValue("false")  Boolean forAll,
+                                                             @QueryParam("unShippedOrderIds") List<String> unShippedOrderIds) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated update document");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("forAll",forAll.toString());
+        queryParams.put("unShippedOrderIds",getStringQueryParam(unShippedOrderIds));
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_EXPECTED_ORDERS_LOCAL_PATH, queryParams,null,MergeOption.ListResults);
+    }
+
+    @GET
+    @Path("/documents/expected-orders/local")
+    public Response getExpectedOrdersLocal(@Context HttpHeaders headers,
+                                                                  @QueryParam("forAll") @DefaultValue("false") Boolean forAll,
+                                                                  @QueryParam("unShippedOrderIds") List<String> unShippedOrderIds) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("forAll",forAll.toString());
+        queryParams.put("unShippedOrderIds",getStringQueryParam(unShippedOrderIds));
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_EXPECTED_ORDERS_PATH,queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_EXPECTED_ORDERS_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend ,_frontendServiceUrl);
+    }
+    /************************************   /documents/expected-orders - END   ************************************/
 
     /****************************************   /collaboration-groups/{id}   ****************************************/
     @GET
@@ -2604,7 +2706,7 @@ public class Delegate implements ServletContextListener {
                                                        String initiatorFederationIdHeader,
                                                        String responderFederationIdHeader,
                                                        String delegateId) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,initiatorFederationIdHeader,responderFederationIdHeader,delegateId,null,null);
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,initiatorFederationIdHeader,responderFederationIdHeader,Arrays.asList(delegateId),null,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2614,7 +2716,7 @@ public class Delegate implements ServletContextListener {
                                                        String body,
                                                        String federationIdHeader,
                                                        String delegateId) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,delegateId,null,null);
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,Arrays.asList(delegateId),null,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2642,7 +2744,7 @@ public class Delegate implements ServletContextListener {
                                                        String federationIdHeader,
                                                        String delegateId,
                                                        HttpServletResponse response) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,delegateId,null,response);
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,Arrays.asList(delegateId),null,response);
     }
 
 
@@ -2664,7 +2766,7 @@ public class Delegate implements ServletContextListener {
                                                        String federationIdHeader,
                                                        String delegateId,
                                                        MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,delegateId,mergeOption,null);
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,Arrays.asList(delegateId),mergeOption,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2673,7 +2775,17 @@ public class Delegate implements ServletContextListener {
                                                        HashMap<String, String> queryParams,
                                                        String body,
                                                        String delegateId) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,delegateId,null,null);
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,Arrays.asList(delegateId),null,null);
+    }
+
+    private Response businessProcessServiceCallWrapper(String method,
+                                                       String userAccessToken,
+                                                       String pathToSendRequest,
+                                                       HashMap<String, String> queryParams,
+                                                       String body,
+                                                       List<String> delegateIds,
+                                                       MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
+        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,delegateIds,mergeOption,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2684,7 +2796,7 @@ public class Delegate implements ServletContextListener {
                                                        String federationIdHeader,
                                                        String initiatorFederationIdHeader,
                                                        String responderFederationIdHeader,
-                                                       String delegateId,
+                                                       List<String> delegateIds,
                                                        MergeOption mergeOption,
                                                        HttpServletResponse response) throws JsonParseException, JsonMappingException, IOException {
         // validation check of the authorization header in the local identity service
@@ -2712,20 +2824,20 @@ public class Delegate implements ServletContextListener {
         }
 
         DelegateResponse delegateResponse = null;
-        if(method.contentEquals("GET") && delegateId != null){
-            delegateResponse = _httpHelper.sendGetRequestToSingleDelegate(pathToSendRequest, headers, queryParams,delegateId,response);
+        if(method.contentEquals("GET") && delegateIds != null && delegateIds.size() == 1){
+            delegateResponse = _httpHelper.sendGetRequestToSingleDelegate(pathToSendRequest, headers, queryParams,delegateIds.get(0),response);
         }
-        else if(method.contentEquals("GET") && delegateId == null){
-            delegateResponse = _httpHelper.sendGetRequestToAllDelegates(pathToSendRequest, headers, queryParams,mergeOption,response);
+        else if(method.contentEquals("GET") && (delegateIds == null || delegateIds.size() > 1)){
+            delegateResponse = _httpHelper.sendGetRequestToAllDelegates(pathToSendRequest, headers, queryParams,mergeOption,response,delegateIds);
         }
-        else if(method.contentEquals("POST") && delegateId != null){
-            delegateResponse = _httpHelper.sendPostRequestToSingleDelegate(pathToSendRequest, headers, queryParams,body,delegateId);
+        else if(method.contentEquals("POST") && delegateIds != null){
+            delegateResponse = _httpHelper.sendPostRequestToSingleDelegate(pathToSendRequest, headers, queryParams,body,delegateIds.get(0));
         }
-        else if(method.contentEquals("DELETE") && delegateId != null){
-            delegateResponse = _httpHelper.sendDeleteRequestToSingleDelegate(pathToSendRequest, headers, queryParams,delegateId);
+        else if(method.contentEquals("DELETE") && delegateIds != null){
+            delegateResponse = _httpHelper.sendDeleteRequestToSingleDelegate(pathToSendRequest, headers, queryParams,delegateIds.get(0));
         }
         else if(method.contentEquals("PATCH")){
-            delegateResponse = _httpHelper.sendPatchRequestToSingleDelegate(pathToSendRequest, headers,queryParams,body,delegateId);
+            delegateResponse = _httpHelper.sendPatchRequestToSingleDelegate(pathToSendRequest, headers,queryParams,body,delegateIds.get(0));
         }
 
         return Response.status(Response.Status.fromStatusCode(delegateResponse.getStatus()))
@@ -2829,6 +2941,37 @@ public class Delegate implements ServletContextListener {
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
 
         return _httpHelper.forwardGetRequest(IdentityHandler.GET_PARTY_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /party/{partyId} - END   ************************************/
+
+    /****************************************   /party/{partyId}   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/parties/{partyIds}")
+    public Response getParty(@Context HttpHeaders headers, @PathParam("partyIds") List<String> partyIds, @QueryParam("includeRoles") boolean includeRoles, @QueryParam("delegateIds") List<String> delegateIds) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get settings");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("includeRoles", String.valueOf(includeRoles));
+        logger.info("called delegateIds:{}",delegateIds);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_PARTIES_LOCAL_PATH,getStringQueryParam(partyIds)), queryParams,null,delegateIds,MergeOption.ListResults);
+    }
+
+    @GET
+    @Path("/parties/{partyIds}/local")
+    public Response getPartyLocal(@Context HttpHeaders headers,@PathParam("partyIds") List<String> partyIds,@QueryParam("includeRoles") boolean includeRoles) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("includeRoles", String.valueOf(includeRoles));
+
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_PARTIES_PATH,getStringQueryParam(partyIds)), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IdentityHandler.GET_PARTIES_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
     }
     /************************************   /party/{partyId} - END   ************************************/
 

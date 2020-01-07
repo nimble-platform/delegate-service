@@ -6,6 +6,9 @@ import java.util.HashMap;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,6 +29,8 @@ public class CatalogHandler {
     public static String GET_CATALOG_LOCAL_PATH= "/catalogue/%s/%s/local";
     public static String GET_CATALOG_LINE_BY_HJID_PATH = "/catalogueline/%s";
     public static String GET_CATALOG_LINE_BY_HJID_LOCAL_PATH = "/catalogueline/%s/local";
+	public static String GET_CATALOG_LINES_BY_HJIDS_PATH = "/cataloguelines";
+	public static String GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH = "/cataloguelines/local";
     public static String GET_CATALOG_LINE_PATH = "/catalogue/%s/catalogueline/%s";
     public static String GET_CATALOG_LINE_LOCAL_PATH = "/catalogue/%s/catalogueline/%s/local";
     public static String GET_BINARY_CONTENT_PATH = "/binary-content";
@@ -86,5 +91,19 @@ public class CatalogHandler {
     				.build();
     	}
 		return null;
+	}
+
+	public static String mergeListResults(HashMap<ServiceEndpoint, String> delegateResponses){
+		JsonArray jsonArray = new JsonArray();
+
+		JsonParser jsonParser = new JsonParser();
+
+		for (String value : delegateResponses.values()) {
+			JsonArray elements = (JsonArray) jsonParser.parse(value);
+			for (JsonElement element : elements) {
+				jsonArray.add(element);
+			}
+		}
+		return jsonArray.toString();
 	}
 }
