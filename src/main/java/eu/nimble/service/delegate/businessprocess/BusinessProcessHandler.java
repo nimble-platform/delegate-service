@@ -387,7 +387,7 @@ public class BusinessProcessHandler {
 
     public static String mergeCollaborationGroupAndFederatedCollaborations(String collaborationGroupResponsesAsString, String federatedCollaborationGroupsAsString){
         // the response
-        JsonArray collaborationGroupResponse = new JsonArray();
+        JsonArray collaborationGroups = new JsonArray();
         int size = 0;
 
         // federated collaboration groups
@@ -402,134 +402,55 @@ public class BusinessProcessHandler {
                 continue;
             }
             for (JsonElement jsonElement : object) {
-                // add collaboration group to response
-                collaborationGroupResponse.add(jsonElement);
-                // increment the size
-                size++;
-                // add collaboration groups to Map
                 String collaborationId = jsonElement.getAsJsonObject().get("id").getAsString();
-                pairList.add(new AbstractMap.SimpleEntry<>(federationId,collaborationId));
+                if(!pairList.contains(new AbstractMap.SimpleEntry<>(federationId,collaborationId))){
+                    // add collaboration group to response
+                    collaborationGroups.add(jsonElement);
+                    // increment the size
+                    size++;
+                    // add collaboration groups to Map
 
-                JsonArray federatedCollaborationGroupMetadatas = jsonElement.getAsJsonObject().get("federatedCollaborationGroupMetadatas").getAsJsonArray();
-                for (JsonElement federatedCollaborationGroupMetadata : federatedCollaborationGroupMetadatas) {
-                    pairList.add(new AbstractMap.SimpleEntry<>(federatedCollaborationGroupMetadata.getAsJsonObject().get("federationID").getAsString(),federatedCollaborationGroupMetadata.getAsJsonObject().get("id").getAsString()));
+                    pairList.add(new AbstractMap.SimpleEntry<>(federationId,collaborationId));
+
+                    JsonArray federatedCollaborationGroupMetadatas = jsonElement.getAsJsonObject().get("federatedCollaborationGroupMetadatas").getAsJsonArray();
+                    for (JsonElement federatedCollaborationGroupMetadata : federatedCollaborationGroupMetadatas) {
+                        pairList.add(new AbstractMap.SimpleEntry<>(federatedCollaborationGroupMetadata.getAsJsonObject().get("federationID").getAsString(),federatedCollaborationGroupMetadata.getAsJsonObject().get("id").getAsString()));
+                    }
                 }
             }
         }
 
-        JsonArray collaborationGroupResponses = parser.parse(collaborationGroupResponsesAsString).getAsJsonArray();
+        JsonObject collaborationGroupResponse = parser.parse(collaborationGroupResponsesAsString).getAsJsonObject();
         // merge collaboration groups to federated ones
-        for (JsonElement collaborationGroup : collaborationGroupResponses) {
-            String federationId = collaborationGroup.getAsJsonObject().get("federationId").getAsString();
-            JsonObject object = collaborationGroup.getAsJsonObject().get("collaborationGroups").getAsJsonObject();
-            JsonArray collaborationGroups = object.get("collaborationGroups").getAsJsonArray();
-            int groupSize = object.get("size").getAsInt();
+        JsonArray collaborationGroupsInTheResponse = collaborationGroupResponse.get("collaborationGroups").getAsJsonArray();
+        int groupSize = collaborationGroupResponse.get("size").getAsInt();
 
-            for (JsonElement group : collaborationGroups) {
-                String id = group.getAsJsonObject().get("id").getAsString();
-                // if we have this collaboration group in the response, decrement the group size and skip this group
-                if(pairList.contains(new AbstractMap.SimpleEntry<>(federationId,id))){
-                    groupSize--;
-                    continue;
-                }
-                // else add this group to response
-                collaborationGroupResponse.add(group);
+        for (JsonElement group : collaborationGroupsInTheResponse) {
+            String id = group.getAsJsonObject().get("id").getAsString();
+            String federationId = group.getAsJsonObject().get("federationId").getAsString();
+            // if we have this collaboration group in the response, decrement the group size and skip this group
+            if(pairList.contains(new AbstractMap.SimpleEntry<>(federationId,id))){
+                groupSize--;
+                continue;
             }
-            // increment the total group size
-            size += groupSize;
+            // else add this group to response
+            collaborationGroups.add(group);
         }
+        // increment the total group size
+        size += groupSize;
 
         PriorityQueue<JsonObject> queue = new PriorityQueue<>(new CollaborationGroupComparator());
-        for (JsonElement cpr : collaborationGroupResponse) {
+        for (JsonElement cpr : collaborationGroups) {
             queue.add(cpr.getAsJsonObject());
         }
-        JsonArray collaborationGroups = new JsonArray();
+        JsonArray sortedCollaborationGroups = new JsonArray();
         for (JsonObject object : queue) {
 //            System.out.println(object);
-            collaborationGroups.add(object);
+            sortedCollaborationGroups.add(object);
         }
-        // TODO: limit info here
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("size",size);
-        jsonObject.add("collaborationGroups",collaborationGroups);
-        return jsonObject.toString();
-    }
-
-    public static String mergeProcessInstanceGroupFilters(List<Future<Response>> futureList){
-        JsonArray tradingPartnerIDs = new JsonArray();
-        JsonArray tradingPartnerFederationIds = new JsonArray();
-        JsonArray tradingPartnerNames = new JsonArray();
-        JsonArray relatedProducts = new JsonArray();
-        JsonArray relatedProductCategories = new JsonArray();
-        JsonArray status = new JsonArray();
-
-        JsonParser jsonParser = new JsonParser();
-
-        // Wait (one by one) for the responses from all the services
-        HashMap<ServiceEndpoint, String> resList = new HashMap<ServiceEndpoint, String>();
-        for(int i = 0; i< futureList.size(); i++) {
-            Future<Response> response = futureList.get(i);
-            try {
-                Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
-                if (res.getStatus() > 300) {
-//                    logger.warn("got failure status code " + res.getStatus() + " from appName:" + endpoint.getAppName() +
-//                            " (" + endpoint.getHostName() +
-//                            ":" + endpoint.getPort() + ")");
-                    continue;
-                }
-                String data = res.readEntity(String.class);
-                JsonObject processInstanceGroupFilter = jsonParser.parse(data).getAsJsonObject();
-                JsonArray _tradingPartnerIDs = processInstanceGroupFilter.get("tradingPartnerIDs").getAsJsonArray();
-                for (JsonElement tradingPartnerID : _tradingPartnerIDs) {
-                    if(!tradingPartnerIDs.contains(tradingPartnerID)){
-                        tradingPartnerIDs.add(tradingPartnerID);
-                    }
-                }
-                JsonArray _tradingPartnerFederationIds = processInstanceGroupFilter.get("tradingPartnerFederationIds").getAsJsonArray();
-                for (JsonElement tradingPartnerFederationId : _tradingPartnerFederationIds) {
-                    if(!tradingPartnerFederationIds.contains(tradingPartnerFederationId)){
-                        tradingPartnerFederationIds.add(tradingPartnerFederationId);
-                    }
-                }
-                JsonArray _tradingPartnerNames = processInstanceGroupFilter.get("tradingPartnerNames").getAsJsonArray();
-                for (JsonElement tradingPartnerName : _tradingPartnerNames) {
-                    if(!tradingPartnerNames.contains(tradingPartnerName)){
-                        tradingPartnerNames.add(tradingPartnerName);
-                    }
-                }
-                JsonArray _relatedProducts = processInstanceGroupFilter.get("relatedProducts").getAsJsonArray();
-                for (JsonElement relatedProduct : _relatedProducts) {
-                    if(!relatedProducts.contains(relatedProduct)){
-                        relatedProducts.add(relatedProduct);
-                    }
-                }
-                JsonArray _relatedProductCategories = processInstanceGroupFilter.get("relatedProductCategories").getAsJsonArray();
-                for (JsonElement relatedProductCategory : _relatedProductCategories) {
-                    if(!relatedProductCategories.contains(relatedProductCategory)){
-                        relatedProductCategories.add(relatedProductCategory);
-                    }
-                }
-                JsonArray _status = processInstanceGroupFilter.get("status").getAsJsonArray();
-                for (JsonElement stat : _status) {
-                    if(!status.contains(stat)){
-                        status.add(stat);
-                    }
-                }
-            } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-//                        " appName:" + endpoint.getAppName() +
-//                        " (" + endpoint.getHostName() +
-//                        ":" + endpoint.getPort() + ") - " +
-//                        e.getMessage());
-            }
-        }
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.add("tradingPartnerIDs",tradingPartnerIDs);
-        jsonObject.add("tradingPartnerFederationIds",tradingPartnerFederationIds);
-        jsonObject.add("tradingPartnerNames",tradingPartnerNames);
-        jsonObject.add("relatedProducts",relatedProducts);
-        jsonObject.add("relatedProductCategories",relatedProductCategories);
-        jsonObject.add("status",status);
+        jsonObject.add("collaborationGroups",sortedCollaborationGroups);
         return jsonObject.toString();
     }
 

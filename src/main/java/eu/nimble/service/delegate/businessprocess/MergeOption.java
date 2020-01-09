@@ -5,7 +5,6 @@ public enum MergeOption {
     DoubleResults,
     RatingSummaries,
     CollaborationGroups,
-    ProcessInstanceGroupFilter,
     IndividualRatingsAndReviews,
     ProcessInstanceData,
     OverallStatistics,

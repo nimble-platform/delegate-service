@@ -307,9 +307,6 @@ public class HttpHelper {
         else if(mergeOption == MergeOption.CollaborationGroups){
             data = BusinessProcessHandler.mergeCollaborationGroups(endpointList, futureList);
         }
-        else if(mergeOption == MergeOption.ProcessInstanceGroupFilter){
-            data = BusinessProcessHandler.mergeProcessInstanceGroupFilters(futureList);
-        }
         else if(mergeOption == MergeOption.IndividualRatingsAndReviews){
             data = BusinessProcessHandler.mergeIndividualRatingsAndReviews(futureList);
         }

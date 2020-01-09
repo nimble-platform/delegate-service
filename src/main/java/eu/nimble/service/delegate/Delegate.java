@@ -2,6 +2,7 @@ package eu.nimble.service.delegate;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import eu.nimble.service.delegate.businessprocess.BusinessProcessHandler;
 import eu.nimble.service.delegate.businessprocess.MergeOption;
@@ -1528,7 +1529,8 @@ public class Delegate implements ServletContextListener {
                                            @QueryParam("archived") @DefaultValue("false") Boolean archived,
                                            @QueryParam("status") List<String> status,
                                            @QueryParam("collaborationRole") String collaborationRole,
-                                           @QueryParam("isProject") @DefaultValue("false") Boolean isProject) throws JsonParseException, JsonMappingException, IOException {
+                                           @QueryParam("isProject") @DefaultValue("false") Boolean isProject,
+                                           @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get collaboration groups");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
@@ -1541,22 +1543,19 @@ public class Delegate implements ServletContextListener {
         queryParams.put("status", getStringQueryParam(status));
         queryParams.put("collaborationRole", collaborationRole);
         queryParams.put("isProject",isProject.toString());
-        Response response = businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_COLLABORATION_GROUPS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"), MergeOption.CollaborationGroups);
+        Response response = businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_COLLABORATION_GROUPS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),delegateId);
         if(response.getStatus() == 200){
             String body = response.getEntity().toString();
             List<String> federationIds = new ArrayList<>();
             List<String> ids = new ArrayList<>();
 
             JsonParser parser = new JsonParser();
-            JsonArray jsonArray = parser.parse(body).getAsJsonArray();
+            JsonObject jsonObject = parser.parse(body).getAsJsonObject();
 
-            for (JsonElement jsonElement : jsonArray) {
-                String federationId = jsonElement.getAsJsonObject().get("federationId").getAsString();
-                JsonArray collaborationGroups = jsonElement.getAsJsonObject().get("collaborationGroups").getAsJsonObject().get("collaborationGroups").getAsJsonArray();
-                for (JsonElement collaborationGroup : collaborationGroups) {
-                    ids.add(collaborationGroup.getAsJsonObject().get("id").getAsString());
-                    federationIds.add(federationId);
-                }
+            JsonArray collaborationGroups = jsonObject.get("collaborationGroups").getAsJsonArray();
+            for (JsonElement collaborationGroup : collaborationGroups) {
+                ids.add(collaborationGroup.getAsJsonObject().get("id").getAsString());
+                federationIds.add(collaborationGroup.getAsJsonObject().get("federationId").getAsString());
             }
             // get federation collaborations
             Response federatedCollaborationsResponse = getFederatedCollaborationGroup(headers,ids,federationIds);
@@ -1618,7 +1617,8 @@ public class Delegate implements ServletContextListener {
                                                    @QueryParam("tradingPartnerIDs") List<String> tradingPartnerIDs,
                                                    @QueryParam("archived") @DefaultValue("false") Boolean archived,
                                                    @QueryParam("status") List<String> status,
-                                                   @QueryParam("collaborationRole") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
+                                                   @QueryParam("collaborationRole") String collaborationRole,
+                                                   @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
@@ -1628,7 +1628,24 @@ public class Delegate implements ServletContextListener {
         queryParams.put("archived",archived.toString());
         queryParams.put("status", getStringQueryParam(status));
         queryParams.put("collaborationRole", collaborationRole);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_PROCESS_INSTANCE_GROUP_FILTERS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"), MergeOption.ProcessInstanceGroupFilter);
+        Response response = businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_PROCESS_INSTANCE_GROUP_FILTERS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"), delegateId);
+        if(response.getStatus() == 200){
+            String body = response.getEntity().toString();
+
+            JsonParser parser = new JsonParser();
+            JsonObject jsonObject = parser.parse(body).getAsJsonObject();
+
+            JsonArray instanceNames = new JsonArray();
+            for (ServiceEndpoint serviceEndpoint : _eurekaHandler.getEndpointsFromEureka()) {
+                instanceNames.add(serviceEndpoint.getAppName());
+            }
+            jsonObject.add("instanceNames",instanceNames);
+            return Response.status(Response.Status.OK)
+                    .type(MediaType.APPLICATION_JSON)
+                    .entity(jsonObject.toString())
+                    .build();
+        }
+        return response;
     }
 
     @GET
