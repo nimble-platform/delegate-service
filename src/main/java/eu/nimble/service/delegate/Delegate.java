@@ -155,6 +155,13 @@ public class Delegate implements ServletContextListener {
         return Response.status(Response.Status.OK).entity(endpointList).build();
     }
 
+    @GET
+    @Path("/eureka/app-name")
+    @Produces({ MediaType.APPLICATION_JSON })
+    public Response eurekaAppName() {
+        return Response.status(Response.Status.OK).entity(_eurekaHandler.getAppName()).build();
+    }
+
     /***************************************************   INDEXING SERVICE   ***************************************************/
 
     /***********************************   indexing-service/item/fields   ***********************************/
