@@ -1234,7 +1234,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
         queryParams.put("collaborationRole", collaborationRole);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.CHECK_ALL_COLLABORATIONS_FINISHED_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.BooleanResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.CHECK_ALL_COLLABORATIONS_FINISHED_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.BooleanResults);
     }
 
     @GET
@@ -1270,7 +1270,7 @@ public class Delegate implements ServletContextListener {
         queryParams.put("partyId", partyId);
         queryParams.put("archived", archived.toString());
         queryParams.put("role", role);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_ACTION_REQUIRED_PROCESS_COUNT_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.DoubleResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_ACTION_REQUIRED_PROCESS_COUNT_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.DoubleResults);
     }
 
     @GET
@@ -1314,7 +1314,7 @@ public class Delegate implements ServletContextListener {
         queryParams.put("partyId", partyId);
         queryParams.put("role", role);
         queryParams.put("status", status);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_PROCESS_COUNT_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.DoubleResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_PROCESS_COUNT_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.DoubleResults);
     }
 
     @GET
@@ -1362,7 +1362,7 @@ public class Delegate implements ServletContextListener {
         queryParams.put("partyId", partyId);
         queryParams.put("role", role);
         queryParams.put("status", status);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_TRADING_VOLUME_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.DoubleResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_TRADING_VOLUME_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.DoubleResults);
     }
 
     @GET
@@ -1400,7 +1400,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.DoubleResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.DoubleResults);
     }
 
     @GET
@@ -1430,7 +1430,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_COLLABORATION_TIME_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.DoubleResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_COLLABORATION_TIME_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.DoubleResults);
     }
 
     @GET
@@ -1460,7 +1460,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_RATING_SUMMARY_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.RatingSummaries);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_RATING_SUMMARY_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.RatingSummaries);
     }
 
     @GET
@@ -1492,7 +1492,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("id", getStringQueryParam(groupId));
         queryParams.put("federationId", getStringQueryParam(federationId));
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_FEDERATED_COLLABORATION_GROUP_LOCAL_PATH, queryParams,null, MergeOption.CollaborationGroups);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_FEDERATED_COLLABORATION_GROUP_LOCAL_PATH, queryParams, MergeOption.CollaborationGroups);
     }
 
     @GET
@@ -1866,7 +1866,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated get document xml content");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId",partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.LIST_ALL_INDIVIDUAL_RATINGS_AND_REVIEWS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"), MergeOption.IndividualRatingsAndReviews);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.LIST_ALL_INDIVIDUAL_RATINGS_AND_REVIEWS_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.IndividualRatingsAndReviews);
     }
 
     @GET
@@ -2121,7 +2121,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId",partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),MergeOption.ListResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_DIGITAL_AGREEMENT_FOR_PARTIES_AND_PRODUCT_3_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"),MergeOption.ListResults);
     }
 
     @GET
@@ -2265,7 +2265,7 @@ public class Delegate implements ServletContextListener {
         if(archived != null){
             queryParams.put("archived",archived.toString());
         }
-        businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.EXPORT_PROCESS_INSTANCE_DATA_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"),MergeOption.ProcessInstanceData,response);
+        businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.EXPORT_PROCESS_INSTANCE_DATA_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"),response);
     }
 
     @GET
@@ -2352,7 +2352,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("forAll",forAll.toString());
         queryParams.put("unShippedOrderIds",getStringQueryParam(unShippedOrderIds));
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_EXPECTED_ORDERS_LOCAL_PATH, queryParams,null,MergeOption.ListResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_EXPECTED_ORDERS_LOCAL_PATH, queryParams,MergeOption.ListResults);
     }
 
     @GET
@@ -2385,7 +2385,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
         queryParams.put("role", role);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_STATISTICS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.OverallStatistics);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_STATISTICS_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.OverallStatistics);
     }
 
     @GET
@@ -2419,7 +2419,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("orderId",orderId);
-        businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GENERATE_CONTRACT_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"),delegateId,response);
+        businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GENERATE_CONTRACT_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"),delegateId,response);
     }
 
     @GET
@@ -2577,7 +2577,7 @@ public class Delegate implements ServletContextListener {
         logger.info("called federated get average response time for months");
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("partyId", partyId);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"),null, MergeOption.AverageResponseTimeForMonths);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_AVERAGE_RESPONSE_TIME_FOR_MONTHS_LOCAL_PATH, queryParams,headers.getHeaderString("federationId"), MergeOption.AverageResponseTimeForMonths);
     }
 
     @GET
@@ -2734,7 +2734,7 @@ public class Delegate implements ServletContextListener {
                                                        String body,
                                                        String initiatorFederationIdHeader,
                                                        String responderFederationIdHeader,
-                                                       String delegateId) throws JsonParseException, JsonMappingException, IOException {
+                                                       String delegateId) throws IOException {
         return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,initiatorFederationIdHeader,responderFederationIdHeader,Arrays.asList(delegateId),null,null);
     }
 
@@ -2744,47 +2744,40 @@ public class Delegate implements ServletContextListener {
                                                        HashMap<String, String> queryParams,
                                                        String body,
                                                        String federationIdHeader,
-                                                       String delegateId) throws JsonParseException, JsonMappingException, IOException {
+                                                       String delegateId) throws IOException {
         return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,Arrays.asList(delegateId),null,null);
     }
 
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
+    private Response businessProcessServiceCallWrapper(String userAccessToken,
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
-                                                       String body,
-                                                       MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,null,mergeOption,null);
+                                                       MergeOption mergeOption) throws IOException {
+        return businessProcessServiceCallWrapper("GET",userAccessToken,pathToSendRequest,queryParams,null,null,null,null,null,mergeOption,null);
     }
 
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
+    private Response businessProcessServiceCallWrapper(String userAccessToken,
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
                                                        String federationIdHeader,
-                                                       MergeOption mergeOption,
-                                                       HttpServletResponse response) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,null,mergeOption,response);
+                                                       HttpServletResponse response) throws IOException {
+        return businessProcessServiceCallWrapper("GET",userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,null,MergeOption.ProcessInstanceData,response);
     }
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
+    private Response businessProcessServiceCallWrapper(String userAccessToken,
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
                                                        String federationIdHeader,
                                                        String delegateId,
-                                                       HttpServletResponse response) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,Arrays.asList(delegateId),null,response);
+                                                       HttpServletResponse response) throws IOException {
+        return businessProcessServiceCallWrapper("GET",userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,Arrays.asList(delegateId),null,response);
     }
 
 
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
+    private Response businessProcessServiceCallWrapper(String userAccessToken,
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
-                                                       String body,
                                                        String federationIdHeader,
-                                                       MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,null,mergeOption,null);
+                                                       MergeOption mergeOption) throws IOException {
+        return businessProcessServiceCallWrapper("GET",userAccessToken,pathToSendRequest,queryParams,null,federationIdHeader,null,null,null,mergeOption,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2792,29 +2785,15 @@ public class Delegate implements ServletContextListener {
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
                                                        String body,
-                                                       String federationIdHeader,
-                                                       String delegateId,
-                                                       MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,federationIdHeader,null,null,Arrays.asList(delegateId),mergeOption,null);
-    }
-
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
-                                                       String pathToSendRequest,
-                                                       HashMap<String, String> queryParams,
-                                                       String body,
-                                                       String delegateId) throws JsonParseException, JsonMappingException, IOException {
+                                                       String delegateId) throws IOException {
         return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,Arrays.asList(delegateId),null,null);
     }
 
-    private Response businessProcessServiceCallWrapper(String method,
-                                                       String userAccessToken,
+    private Response businessProcessServiceCallWrapper(String userAccessToken,
                                                        String pathToSendRequest,
                                                        HashMap<String, String> queryParams,
-                                                       String body,
-                                                       List<String> delegateIds,
-                                                       MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
-        return businessProcessServiceCallWrapper(method,userAccessToken,pathToSendRequest,queryParams,body,null,null,null,delegateIds,mergeOption,null);
+                                                       List<String> delegateIds) throws IOException {
+        return businessProcessServiceCallWrapper("GET",userAccessToken,pathToSendRequest,queryParams,null,null,null,null,delegateIds,MergeOption.ListResults,null);
     }
 
     private Response businessProcessServiceCallWrapper(String method,
@@ -2827,7 +2806,7 @@ public class Delegate implements ServletContextListener {
                                                        String responderFederationIdHeader,
                                                        List<String> delegateIds,
                                                        MergeOption mergeOption,
-                                                       HttpServletResponse response) throws JsonParseException, JsonMappingException, IOException {
+                                                       HttpServletResponse response) throws IOException {
         // validation check of the authorization header in the local identity service
         if (!_identityLocalHandler.userExist(userAccessToken)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -2964,7 +2943,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("includeRoles", String.valueOf(includeRoles));
 
-        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_PARTY_PATH,partyId), null);
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_PARTY_PATH,partyId), queryParams);
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
@@ -2982,7 +2961,7 @@ public class Delegate implements ServletContextListener {
         HashMap<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("includeRoles", String.valueOf(includeRoles));
         logger.info("called delegateIds:{}",delegateIds);
-        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_PARTIES_LOCAL_PATH,getStringQueryParam(partyIds)), queryParams,null,delegateIds,MergeOption.ListResults);
+        return businessProcessServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_PARTIES_LOCAL_PATH,getStringQueryParam(partyIds)), queryParams,delegateIds);
     }
 
     @GET
@@ -3003,6 +2982,32 @@ public class Delegate implements ServletContextListener {
         return _httpHelper.forwardGetRequest(IdentityHandler.GET_PARTIES_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
     }
     /************************************   /party/{partyId} - END   ************************************/
+
+    /****************************************   /person/{personId}  ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/person/{personId}")
+    public Response getPerson(@Context HttpHeaders headers, @PathParam("personId") Long personId, @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get settings");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION),String.format(IdentityHandler.GET_PERSON_LOCAL_PATH,personId), queryParams,null,delegateId);
+    }
+
+    @GET
+    @Path("/person/{personId}/local")
+    public Response getPersonLocal(@Context HttpHeaders headers,@PathParam("personId") Long personId) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        URI identityServiceUri = _httpHelper.buildUriWithStringParams(_identityLocalHandler._baseUrl, _identityLocalHandler._port, _identityLocalHandler._pathPrefix+String.format(IdentityHandler.GET_PERSON_PATH,personId), null);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(IdentityHandler.GET_PERSON_LOCAL_PATH, identityServiceUri.toString(),headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /person/{personId} - END   ************************************/
 
     /***************************************************   IDENTITY SERVICE - END   ***************************************************/
 }
