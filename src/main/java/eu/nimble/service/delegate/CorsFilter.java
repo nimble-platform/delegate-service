@@ -17,10 +17,18 @@ import javax.ws.rs.ext.Provider;
 public class CorsFilter implements ContainerResponseFilter {
 	@Override
 	public void filter(ContainerRequestContext requestContext,
-			ContainerResponseContext responseContext) throws IOException {
-		responseContext.getHeaders().add("Access-Control-Allow-Origin", "*");
-	    responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
-	    responseContext.getHeaders().add("Access-Control-Allow-Headers", "origin, content-type, accept, authorization");
-	    responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
+					   ContainerResponseContext responseContext) throws IOException {
+		if(!responseContext.getHeaders().containsKey("Access-Control-Allow-Origin")){
+			responseContext.getHeaders().add("Access-Control-Allow-Origin", "*");
+		}
+		if(!responseContext.getHeaders().containsKey("Access-Control-Allow-Credentials")){
+			responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
+		}
+		if(!responseContext.getHeaders().containsKey("Access-Control-Allow-Headers")){
+			responseContext.getHeaders().add("Access-Control-Allow-Headers", "origin, content-type, accept, authorization, federationId, initiatorFederationId,responderFederationId");
+		}
+		if(!responseContext.getHeaders().containsKey("Access-Control-Allow-Methods")){
+			responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
+		}
 	}
 }

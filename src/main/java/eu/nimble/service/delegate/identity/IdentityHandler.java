@@ -28,16 +28,27 @@ public class IdentityHandler {
 	
     public static String POST_LOGIN_PATH = "/login";
 	public static String GET_USER_INFO_PATH = "/user-info";
-	
-    private String _baseUrl;
-    private int _port;
-    private String _pathPrefix;
-    private String _username;
-    private String _password;
-	
+
+	public String _baseUrl;
+	public int _port;
+	public String _pathPrefix;
+	private String _username;
+	private String _password;
+
 	private HttpHelper _httpHelper;
 	private static ObjectMapper _mapper;
-	
+
+	public static String GET_COMPANY_SETTINGS_PATH= "/company-settings/%s";
+	public static String GET_COMPANY_SETTINGS_LOCAL_PATH= "/company-settings/%s/local";
+	public static String GET_NEGOTIATION_SETTINGS_PATH= "/company-settings/%s/negotiation/";
+	public static String GET_NEGOTIATION_SETTINGS_LOCAL_PATH= "/company-settings/%s/negotiation/local";
+	public static String GET_PARTY_PATH= "/party/%s";
+	public static String GET_PARTY_LOCAL_PATH= "/party/%s/local";
+	public static String GET_PARTIES_PATH= "/parties/%s";
+	public static String GET_PARTIES_LOCAL_PATH= "/parties/%s/local";
+	public static String GET_PERSON_PATH= "/person/%s";
+	public static String GET_PERSON_LOCAL_PATH= "/person/%s/local";
+
 	public IdentityHandler(HttpHelper httpHelper, String baseUrl, int port, String pathPrefix, String username, String password) {
 		_baseUrl = baseUrl;
 		_port = port;
