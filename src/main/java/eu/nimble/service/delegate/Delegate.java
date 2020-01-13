@@ -170,6 +170,10 @@ public class Delegate implements ServletContextListener {
     @Path("/item/fields")
     public Response federatedGetItemFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get item fields (indexing service call)");
+        // validation check of the authorization header in the local identity service
+        if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         if (fieldName != null && !fieldName.isEmpty()) {
             queryParams.put("fieldName", fieldName);
@@ -212,6 +216,9 @@ public class Delegate implements ServletContextListener {
     @Path("/party/fields")
     public Response federatedGetPartyFields(@Context HttpHeaders headers, @QueryParam("fieldName") List<String> fieldName) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get party fields (indexing service call)");
+        if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
         if (fieldName != null && !fieldName.isEmpty()) {
             queryParams.put("fieldName", fieldName);
@@ -255,6 +262,9 @@ public class Delegate implements ServletContextListener {
     @Path("/item/search")
     public Response federatedPostItemSearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated post item search (indexing service call)");
+        if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
         //initialize result from the request body
         IndexingServiceResult indexingServiceResult = new IndexingServiceResult(Integer.parseInt(body.get("rows").toString()),
                 Integer.parseInt(body.get("start").toString()));
@@ -296,7 +306,7 @@ public class Delegate implements ServletContextListener {
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
 
         headersToSend.add("Content-Type", "application/json");
-
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/item/search - END   ***********************************/
@@ -308,6 +318,9 @@ public class Delegate implements ServletContextListener {
     @Path("/party/search")
     public Response federatedPostPartySearch(@Context HttpHeaders headers, Map<String, Object> body) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated post party search (indexing service call)");
+        if (_identityLocalHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
         List<ServiceEndpoint> endpointList = _eurekaHandler.getEndpointsFromEureka();
         //initialize result from the request body
         IndexingServiceResult indexingServiceResult;
@@ -551,7 +564,7 @@ public class Delegate implements ServletContextListener {
     public Response getCatalogLines(@PathParam("catalogueUuid") String catalogueUuid, @Context HttpHeaders headers, @QueryParam("lineIds") List<String> lineIds) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get catalog lines (catalog service call)");
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-        if (lineIds != null) {
+        if (lineIds != null && !lineIds.isEmpty()) {
             queryParams.put("lineIds", lineIds);
         }
         return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(CatalogHandler.GET_CATALOG_LINES_LOCAL_PATH, catalogueUuid), queryParams);
@@ -566,7 +579,7 @@ public class Delegate implements ServletContextListener {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
-        if (lineIds != null) {
+        if (lineIds != null && !lineIds.isEmpty()) {
             queryParams.put("lineIds", lineIds);
         }
         URI catalogServiceUri = _httpHelper.buildUri(_catalogHandler.BaseUrl, _catalogHandler.Port, String.format(_catalogHandler.PathPrefix+CatalogHandler.GET_CATALOG_LINES_PATH, catalogueUuid), queryParams);
@@ -574,7 +587,7 @@ public class Delegate implements ServletContextListener {
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
 
-        return _httpHelper.forwardGetRequest(CatalogHandler.GET_BINARY_CONTENT_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LINES_LOCAL_PATH, catalogServiceUri.toString(), headersToSend, _frontendServiceUrl);
     }
     /************************************   catalog-service/catalogue/{catalogueUuid}/cataloguelines - END   ************************************/
 
