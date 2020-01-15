@@ -25,7 +25,7 @@ node ('nimble-jenkins-slave') {
         }
 
         stage('Deploy') {
-            sh 'ssh staging "cd /srv/nimble-staging/ && export BUSINESS_PROCESS_SERVICE_PORT=8081 && ./run-staging.sh restart-single delegate-service"'
+            sh 'ssh staging "cd /srv/nimble-staging/ && ./run-staging.sh restart-single delegate-service"'
         }
     }
 
