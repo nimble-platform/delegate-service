@@ -305,8 +305,6 @@ public class Delegate implements ServletContextListener {
 
         URI uri = _httpHelper.buildUri(_indexingHandler.BaseUrl, _indexingHandler.Port, _indexingHandler.PathPrefix+IndexingHandler.POST_ITEM_SEARCH_PATH, null);
 
-        headersToSend.add("Content-Type", "application/json");
-        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
         return _httpHelper.forwardPostRequest(IndexingHandler.POST_ITEM_SEARCH_LOCAL_PATH, uri.toString(), body, headersToSend, _frontendServiceUrl);
     }
     /***********************************   indexing-service/item/search - END   ***********************************/
