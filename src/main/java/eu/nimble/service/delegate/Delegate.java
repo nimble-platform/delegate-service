@@ -1166,16 +1166,18 @@ public class Delegate implements ServletContextListener {
     @Path("/process-instance-groups/{id}/cancel")
     public Response cancelCollaboration(@Context HttpHeaders headers,
                                         @PathParam("id") String id,
+                                        String cancellationReason,
                                         @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated get document xml content");
-        return businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.CANCEL_COLLABORATION_LOCAL_PATH,id), null,null,delegateId);
+        return businessProcessServiceCallWrapper("POST",headers.getHeaderString(HttpHeaders.AUTHORIZATION), String.format(BusinessProcessHandler.CANCEL_COLLABORATION_LOCAL_PATH,id), null,cancellationReason,delegateId);
     }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/process-instance-groups/{id}/cancel/local")
-    public Response cancelCollaboration(@Context HttpHeaders headers,
-                                        @PathParam("id") String id) throws JsonParseException, JsonMappingException, IOException {
+    public Response cancelCollaborationLocal(@Context HttpHeaders headers,
+                                        @PathParam("id") String id,
+                                        String cancellationReason) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -1183,7 +1185,7 @@ public class Delegate implements ServletContextListener {
 
         MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
-        return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.CANCEL_COLLABORATION_LOCAL_PATH, businessProcessServiceUri.toString(), null,headersToSend, _frontendServiceUrl);
+        return _httpHelper.forwardPostRequestWithStringBody(BusinessProcessHandler.CANCEL_COLLABORATION_LOCAL_PATH, businessProcessServiceUri.toString(), cancellationReason,headersToSend, _frontendServiceUrl);
     }
     /************************************   /collaboration-groups/{id}/archive - END   ************************************/
 
