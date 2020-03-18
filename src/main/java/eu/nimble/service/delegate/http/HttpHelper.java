@@ -468,20 +468,14 @@ public class HttpHelper {
             try {
                 Response res = response.get(REQ_TIMEOUT_SEC, TimeUnit.SECONDS);
                 if (res.getStatus() > 300) {
-                    logger.warn("got failure status code " + res.getStatus() + " from appName:" + endpoint.getAppName() +
-                            " (" + endpoint.getHostName() +
-                            ":" + endpoint.getPort() + ")");
+                    logger.warn("got failure status code {} from appName {} ({}:{})",res.getStatus(),endpoint.getAppName(),endpoint.getHostName(),endpoint.getPort());
                     continue;
                 }
                 String data = res.readEntity(String.class);
                 endpoint.setFrontendServiceUrl(res.getHeaderString("frontendServiceUrl"));
                 resList.put(endpoint, data);
             } catch(Exception e) {
-                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-                        " appName:" + endpoint.getAppName() +
-                        " (" + endpoint.getHostName() +
-                        ":" + endpoint.getPort() + ") - " +
-                        e.getMessage());
+                logger.error("Failed to send request to eureka endpoint: app name: {}, ({}:{})",endpoint.getAppName(),endpoint.getHostName(),endpoint.getPort(),e);
             }
         }
         logger.info("aggregated results: \n" + resList.toString());
@@ -535,11 +529,7 @@ public class HttpHelper {
                 }
             }
         } catch(Exception e) {
-            logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-                    " appName:" + endpoint.getAppName() +
-                    " (" + endpoint.getHostName() +
-                    ":" + endpoint.getPort() + ") - " +
-                    e.getMessage());
+            logger.error("Failed to send request to eureka endpoint: app name: {}, ({}:{})",endpoint.getAppName(),endpoint.getHostName(),endpoint.getPort(),e);
         }
 //        logger.info("aggregated results: \n" + resList.toString());
         return new DelegateResponse(status,data);
@@ -558,11 +548,7 @@ public class HttpHelper {
             }
             data = res.readEntity(String.class);
         } catch(Exception e) {
-            logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-                    " appName:" + endpoint.getAppName() +
-                    " (" + endpoint.getHostName() +
-                    ":" + endpoint.getPort() + ") - " +
-                    e.getMessage());
+            logger.error("Failed to send request to eureka endpoint: app name: {}, ({}:{})",endpoint.getAppName(),endpoint.getHostName(),endpoint.getPort(),e);
         }
 //        logger.info("aggregated results: \n" + resList.toString());
         return new DelegateResponse(status,data);

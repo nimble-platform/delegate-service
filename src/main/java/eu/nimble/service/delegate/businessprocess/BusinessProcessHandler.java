@@ -194,6 +194,7 @@ public class BusinessProcessHandler {
                     return "false";
                 }
             } catch(Exception e) {
+                logger.error("Failed to get response while merging boolean results:",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -221,6 +222,7 @@ public class BusinessProcessHandler {
                 String data = res.readEntity(String.class);
                 result += Double.parseDouble(data);
             } catch(Exception e) {
+                logger.error("Failed to get response while merging double results:",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -275,6 +277,7 @@ public class BusinessProcessHandler {
                 }
 
             } catch(Exception e) {
+                logger.error("Failed to get response while merging average response time for months results:",e);
 //                logger.warn("Failed to send request to eureka endpoint: id: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -331,6 +334,7 @@ public class BusinessProcessHandler {
                 listingAccuracy += object.get("listingAccuracy").getAsInt();
                 conformanceToContractualTerms += object.get("conformanceToContractualTerms").getAsInt();
             } catch(Exception e) {
+                logger.error("Failed to get response while merging rating summary results:",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -373,12 +377,7 @@ public class BusinessProcessHandler {
 
                 jsonArray.add(jsonObject);
             } catch(Exception e) {
-                logger.warn("Exception here:{}",e.getMessage());
-                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-                        " appName:" + endpoint.getAppName() +
-                        " (" + endpoint.getHostName() +
-                        ":" + endpoint.getPort() + ") - " +
-                        e.getMessage());
+                logger.error("Failed to send request to eureka endpoint: app name: {}, ({}:{})",endpoint.getAppName(),endpoint.getHostName(),endpoint.getPort(),e);
             }
         }
         logger.info("aggregated results: \n" + jsonArray.toString());
@@ -475,11 +474,7 @@ public class BusinessProcessHandler {
                 JsonArray individualReviewsAndRatings = jsonParser.parse(data).getAsJsonArray();
                 jsonArray.addAll(individualReviewsAndRatings);
             } catch(Exception e) {
-//                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
-//                        " appName:" + endpoint.getAppName() +
-//                        " (" + endpoint.getHostName() +
-//                        ":" + endpoint.getPort() + ") - " +
-//                        e.getMessage());
+                logger.error("Failed to get response while merging individual ratings:",e);
             }
         }
         return jsonArray.toString();
@@ -507,6 +502,7 @@ public class BusinessProcessHandler {
                     jsonArray.add(element);
                 }
             } catch(Exception e) {
+                logger.error("Failed to get response while merging list results: ",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -568,7 +564,7 @@ public class BusinessProcessHandler {
             response.flushBuffer();
 
         }catch (Exception e){
-            logger.error("Exception while merging results:",e);
+            logger.error("Failed to get response while merging process instance data:",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
@@ -624,6 +620,7 @@ public class BusinessProcessHandler {
                 totalNumberOfTransaction += numberOfTransactions;
                 totalTradingVolume += tradingVolume;
             } catch(Exception e) {
+                logger.error("Failed to get response while merging overall statistics:",e);
 //                logger.warn("Failed to send request to eureka endpoint: app name: " +  endpoint.getAppName() +
 //                        " appName:" + endpoint.getAppName() +
 //                        " (" + endpoint.getHostName() +
