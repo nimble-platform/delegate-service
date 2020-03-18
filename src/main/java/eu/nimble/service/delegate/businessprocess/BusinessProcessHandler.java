@@ -23,7 +23,7 @@ public class BusinessProcessHandler {
 
     private static Logger logger = LogManager.getLogger(BusinessProcessHandler.class);
 
-    private static final int REQ_TIMEOUT_SEC = 3;
+    private static final int REQ_TIMEOUT_SEC = 15;
 
     private static String SERVICE_URL = "BUSINESS_PROCESS_SERVICE_BASE_URL";
     private static String SERVICE_PORT = "BUSINESS_PROCESS_SERVICE_PORT";

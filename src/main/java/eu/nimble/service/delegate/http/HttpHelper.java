@@ -41,7 +41,7 @@ import org.glassfish.jersey.client.HttpUrlConnectorProvider;
  */
 public class HttpHelper {
     private static Logger logger = LogManager.getLogger(HttpHelper.class);
-    private static final int REQ_TIMEOUT_SEC = 3;
+    private static final int REQ_TIMEOUT_SEC = 15;
 
     private Client httpClient;
     private EurekaHandler eurekaHandler;
