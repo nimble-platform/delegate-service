@@ -2327,6 +2327,74 @@ public class Delegate implements ServletContextListener {
     }
     /************************************   /collaboration-groups/{id} - END   ************************************/
 
+    /****************************************   /process-instance-groups   ****************************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/process-instance-groups")
+    public Response getProcessInstanceGroups(@Context HttpHeaders headers,
+                                             @QueryParam("partyId") String partyId,
+                                             @QueryParam("relatedProducts") List<String> relatedProducts,
+                                             @QueryParam("relatedProductCategories") List<String> relatedProductCategories,
+                                             @QueryParam("tradingPartnerIDs") List<String> tradingPartnerIDs,
+                                             @QueryParam("archived") @DefaultValue("false") Boolean archived,
+                                             @QueryParam("limit") Integer limit,
+                                             @QueryParam("offset") Integer offset,
+                                             @QueryParam("status") List<String> status,
+                                             @QueryParam("collaborationRole") String collaborationRole,
+                                             @QueryParam("isProject") @DefaultValue("false") Boolean isProject,
+                                             @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get process instance groups");
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("partyId", partyId);
+        queryParams.put("relatedProducts", getStringQueryParam(relatedProducts));
+        queryParams.put("tradingPartnerIDs", getStringQueryParam(tradingPartnerIDs));
+        queryParams.put("relatedProductCategories", getStringQueryParam(relatedProductCategories));
+        queryParams.put("limit",limit.toString());
+        queryParams.put("offset",offset.toString());
+        queryParams.put("archived",archived.toString());
+        queryParams.put("isProject",isProject.toString());
+        queryParams.put("status", getStringQueryParam(status));
+        queryParams.put("collaborationRole", collaborationRole);
+        return businessProcessServiceCallWrapper("GET",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.GET_PROCESS_INSTANCE_GROUPS_LOCAL_PATH, queryParams,null,headers.getHeaderString("federationId"), delegateId);
+    }
+
+    @GET
+    @Path("/process-instance-groups/local")
+    public Response getProcessInstanceGroupsLocal(@Context HttpHeaders headers,
+                                                  @QueryParam("partyId") String partyId,
+                                                  @QueryParam("relatedProducts") List<String> relatedProducts,
+                                                  @QueryParam("relatedProductCategories") List<String> relatedProductCategories,
+                                                  @QueryParam("tradingPartnerIDs") List<String> tradingPartnerIDs,
+                                                  @QueryParam("archived") @DefaultValue("false") Boolean archived,
+                                                  @QueryParam("limit") Integer limit,
+                                                  @QueryParam("offset") Integer offset,
+                                                  @QueryParam("status") List<String> status,
+                                                  @QueryParam("isProject") @DefaultValue("false") Boolean isProject,
+                                                  @QueryParam("collaborationRole") String collaborationRole) throws JsonParseException, JsonMappingException, IOException {
+        if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        queryParams.put("partyId", partyId);
+        queryParams.put("relatedProducts", getStringQueryParam(relatedProducts));
+        queryParams.put("tradingPartnerIDs", getStringQueryParam(tradingPartnerIDs));
+        queryParams.put("relatedProductCategories", getStringQueryParam(relatedProductCategories));
+        queryParams.put("limit",limit.toString());
+        queryParams.put("offset",offset.toString());
+        queryParams.put("archived",archived.toString());
+        queryParams.put("isProject",isProject.toString());
+        queryParams.put("status", getStringQueryParam(status));
+        queryParams.put("collaborationRole", collaborationRole);
+        URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port,_businessProcessHandler.PathPrefix+BusinessProcessHandler.GET_PROCESS_INSTANCE_GROUPS_PATH, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+        headersToSend.add("federationId",headers.getHeaderString("federationId"));
+        return _httpHelper.forwardGetRequest(BusinessProcessHandler.GET_PROCESS_INSTANCE_GROUPS_LOCAL_PATH, businessProcessServiceUri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /************************************   /process-instance-groups - END   ************************************/
+
     /****************************************   /collaboration-groups/{id}   ****************************************/
     @POST
     @Produces(MediaType.APPLICATION_JSON)

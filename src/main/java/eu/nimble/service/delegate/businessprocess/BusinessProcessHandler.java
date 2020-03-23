@@ -146,6 +146,8 @@ public class BusinessProcessHandler {
     public static String GET_PROCESS_DETAILS_HISTORY_LOCAL_PATH= "/rest/engine/default/history/variable-instance/local";
     public static String GET_EXPECTED_ORDERS_PATH = "/documents/expected-orders";
     public static String GET_EXPECTED_ORDERS_LOCAL_PATH = "/documents/expected-orders/local";
+    public static String GET_PROCESS_INSTANCE_GROUPS_PATH = "/process-instance-groups";
+    public static String GET_PROCESS_INSTANCE_GROUPS_LOCAL_PATH = "/process-instance-groups/local";
 
     public String BaseUrl;
     public int Port;
