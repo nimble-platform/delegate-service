@@ -1806,11 +1806,11 @@ public class Delegate implements ServletContextListener {
                                           String content,
                                           @QueryParam("processInstanceID") String processInstanceID,
                                           @QueryParam("creatorUserID") String creatorUserID,
-                                          @QueryParam("documentType") String documentType,
+                                          @QueryParam("processID") String documentType,
                                           @QueryParam("delegateId") String delegateId) throws JsonParseException, JsonMappingException, IOException {
         logger.info("called federated update document");
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("documentType", documentType);
+        queryParams.put("processID", documentType);
         queryParams.put("creatorUserID", creatorUserID);
         queryParams.put("processInstanceID", processInstanceID);
         return businessProcessServiceCallWrapper("PATCH",headers.getHeaderString(HttpHeaders.AUTHORIZATION), BusinessProcessHandler.UPDATE_PROCESS_INSTANCE_LOCAL_PATH, queryParams,content,delegateId);
@@ -1823,12 +1823,12 @@ public class Delegate implements ServletContextListener {
                                                String content,
                                                @QueryParam("processInstanceID") String processInstanceID,
                                                @QueryParam("creatorUserID") String creatorUserID,
-                                               @QueryParam("documentType") String documentType) throws JsonParseException, JsonMappingException, IOException {
+                                               @QueryParam("processID") String documentType) throws JsonParseException, JsonMappingException, IOException {
         if (!_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION))) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         HashMap<String, String> queryParams = new HashMap<String, String>();
-        queryParams.put("documentType", documentType);
+        queryParams.put("processID", documentType);
         queryParams.put("creatorUserID", creatorUserID);
         queryParams.put("processInstanceID", processInstanceID);
         URI businessProcessServiceUri = _httpHelper.buildUriWithStringParams(_businessProcessHandler.BaseUrl, _businessProcessHandler.Port, _businessProcessHandler.PathPrefix+BusinessProcessHandler.UPDATE_PROCESS_INSTANCE_PATH, queryParams);
