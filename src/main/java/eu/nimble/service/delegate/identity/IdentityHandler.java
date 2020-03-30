@@ -48,6 +48,10 @@ public class IdentityHandler {
 	public static String GET_PARTIES_LOCAL_PATH= "/parties/%s/local";
 	public static String GET_PERSON_PATH= "/person/%s";
 	public static String GET_PERSON_LOCAL_PATH= "/person/%s/local";
+	public static String GET_PERSON_VIA_TOKEN_PATH= "/person/";
+	public static String GET_PERSON_VIA_TOKEN_LOCAL_PATH= "/person/local";
+	public static String GET_PARTY_BY_PERSON_ID_PATH= "/party_by_person/%s";
+	public static String GET_PARTY_BY_PERSON_ID_LOCAL_PATH= "/party_by_person/%s/local";
 
 	public IdentityHandler(HttpHelper httpHelper, String baseUrl, int port, String pathPrefix, String username, String password) {
 		_baseUrl = baseUrl;
