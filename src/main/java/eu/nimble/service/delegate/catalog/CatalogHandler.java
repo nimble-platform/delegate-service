@@ -2,12 +2,14 @@ package eu.nimble.service.delegate.catalog;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -43,6 +45,8 @@ public class CatalogHandler {
 	public static String GET_PRODUCT_STATUS_LOCAL_PATH = "/catalogue/cataloguelines/valid/local";
     public static String GET_BINARY_CONTENTS_PATH = "/binary-contents";
     public static String GET_BINARY_CONTENTS_LOCAL_PATH = "/binary-contents/local";
+    public static String GET_CONTRACT_FOR_CATALOGUE = "/catalogue/contract";
+	public static String GET_CONTRACT_FOR_CATALOGUE_LOCAL_PATH = "/catalogue/contract/local";
     
     public String BaseUrl;
     public int Port;
@@ -107,5 +111,33 @@ public class CatalogHandler {
 			}
 		}
 		return jsonArray.toString();
+	}
+
+	public static String mergeMapResults(HashMap<ServiceEndpoint, String> delegateResponses){
+		JsonObject jsonObject = new JsonObject();
+
+		JsonParser jsonParser = new JsonParser();
+
+		Set<String> keys = null;
+
+		for (String value : delegateResponses.values()) {
+			JsonObject elements = (JsonObject) jsonParser.parse(value);
+			if(keys == null){
+				keys = elements.keySet();
+			}
+			for (String key : keys) {
+				if(elements.get(key).getAsJsonArray().size() != 0){
+					jsonObject.add(key,elements.get(key));
+				}
+			}
+		}
+
+		for (String key : keys) {
+			if(jsonObject.get(key) == null){
+				jsonObject.add(key,new JsonArray());
+			}
+		}
+
+		return jsonObject.toString();
 	}
 }

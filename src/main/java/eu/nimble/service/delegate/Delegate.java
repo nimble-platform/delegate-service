@@ -464,7 +464,7 @@ public class Delegate implements ServletContextListener {
         if (sortOption != null) {
             queryParams.put("sortOption", Arrays.asList(sortOption));
         }
-        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH, queryParams,true);
+        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH, queryParams,MergeOption.ListResults);
     }
 
     // a REST call that should be used between delegates.
@@ -498,6 +498,43 @@ public class Delegate implements ServletContextListener {
         headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
 
         return _httpHelper.forwardGetRequest(CatalogHandler.GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
+    }
+    /***********************************   /cataloguelines - END   ***********************************/
+
+
+    /***********************************   /cataloguelines   ***********************************/
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/catalogue/contract")
+    public Response getContractForCatalogue(@QueryParam("catalogueUuids") List<String> catalogueUuids,
+                                             @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
+        logger.info("called federated get contract for catalogue (catalog service call)");
+        HashMap<String, List<String>> queryParams = new HashMap<String, List<String>>();
+        if (catalogueUuids != null) {
+            queryParams.put("catalogueUuids", Arrays.asList(catalogueUuids.toString()));
+        }
+        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_CONTRACT_FOR_CATALOGUE_LOCAL_PATH, queryParams,MergeOption.MapResults);
+    }
+
+    // a REST call that should be used between delegates.
+    // the origin delegate sends a request and the target delegate will perform the query locally.
+    @GET
+    @Path("/catalogue/contract/local")
+    public Response getContractForCatalogueLocal(@QueryParam("catalogueUuids") List<String> catalogueUuids,
+                                                  @Context HttpHeaders headers) throws JsonParseException, JsonMappingException, IOException {
+        if (_identityFederationHandler.userExist(headers.getHeaderString(HttpHeaders.AUTHORIZATION)) == false) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        HashMap<String, String> queryParams = new HashMap<String, String>();
+        if (catalogueUuids != null) {
+            queryParams.put("catalogueUuids", getStringQueryParam(catalogueUuids));
+        }
+        URI uri = _httpHelper.buildUriWithStringParams(_catalogHandler.BaseUrl, _catalogHandler.Port, _catalogHandler.PathPrefix+CatalogHandler.GET_CONTRACT_FOR_CATALOGUE, queryParams);
+
+        MultivaluedMap<String, Object> headersToSend = new MultivaluedHashMap<String, Object>();
+        headersToSend.add(HttpHeaders.AUTHORIZATION, _identityLocalHandler.getAccessToken());
+
+        return _httpHelper.forwardGetRequest(CatalogHandler.GET_CONTRACT_FOR_CATALOGUE_LOCAL_PATH, uri.toString(), headersToSend, _frontendServiceUrl);
     }
     /***********************************   /cataloguelines - END   ***********************************/
 
@@ -673,7 +710,7 @@ public class Delegate implements ServletContextListener {
 //        // TODO send to all delegates and aggregate results
 //        return _httpHelper.sendGetRequest(targetUri, headersToSend);
 
-        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams,true);
+        return catalogServiceCallWrapper(headers.getHeaderString(HttpHeaders.AUTHORIZATION), CatalogHandler.GET_BINARY_CONTENTS_LOCAL_PATH, queryParams,MergeOption.ListResults);
     }
 
     // a REST call that should be used between delegates.
@@ -744,9 +781,9 @@ public class Delegate implements ServletContextListener {
 
     /***********************************   catalog-service - helper function   ***********************************/
     private Response catalogServiceCallWrapper(String userAccessToken, String pathToSendRequest, HashMap<String, List<String>> queryParams) throws JsonParseException, JsonMappingException, IOException {
-        return catalogServiceCallWrapper(userAccessToken,pathToSendRequest,queryParams,false);
+        return catalogServiceCallWrapper(userAccessToken,pathToSendRequest,queryParams,null);
     }
-    private Response catalogServiceCallWrapper(String userAccessToken, String pathToSendRequest, HashMap<String, List<String>> queryParams,Boolean mergeResponses) throws JsonParseException, JsonMappingException, IOException {
+    private Response catalogServiceCallWrapper(String userAccessToken, String pathToSendRequest, HashMap<String, List<String>> queryParams,MergeOption mergeOption) throws JsonParseException, JsonMappingException, IOException {
         // validation check of the authorization header in the local identity service
         if (_identityLocalHandler.userExist(userAccessToken) == false) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -759,10 +796,15 @@ public class Delegate implements ServletContextListener {
         headers.add(HttpHeaders.AUTHORIZATION, _identityFederationHandler.getAccessToken());
 
         HashMap<ServiceEndpoint, String> delegatesResponse = _httpHelper.sendGetRequestToAllDelegates(pathToSendRequest, headers, queryParams);
-        if(mergeResponses){
+        if(mergeOption == MergeOption.ListResults){
             return Response.status(Response.Status.OK)
                     .type(MediaType.APPLICATION_JSON)
                     .entity(CatalogHandler.mergeListResults(delegatesResponse))
+                    .build();
+        } else if (mergeOption == MergeOption.MapResults){
+            return Response.status(Response.Status.OK)
+                    .type(MediaType.APPLICATION_JSON)
+                    .entity(CatalogHandler.mergeMapResults(delegatesResponse))
                     .build();
         }
         return _catalogHandler.buildResponseFromSingleDelegate(delegatesResponse);

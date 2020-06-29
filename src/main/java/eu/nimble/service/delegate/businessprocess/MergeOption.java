@@ -9,5 +9,6 @@ public enum MergeOption {
     ProcessInstanceData,
     OverallStatistics,
     AverageResponseTimeForMonths,
-    ListResults
+    ListResults,
+    MapResults
 }
