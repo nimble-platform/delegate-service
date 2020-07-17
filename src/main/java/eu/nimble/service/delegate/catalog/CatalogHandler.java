@@ -33,8 +33,8 @@ public class CatalogHandler {
     public static String GET_CATALOG_LINE_BY_HJID_LOCAL_PATH = "/catalogueline/%s/local";
 	public static String GET_CATALOG_LINES_BY_HJIDS_PATH = "/cataloguelines";
 	public static String GET_CATALOG_LINES_BY_HJIDS_LOCAL_PATH = "/cataloguelines/local";
-    public static String GET_CATALOG_LINE_PATH = "/catalogue/%s/catalogueline/%s";
-    public static String GET_CATALOG_LINE_LOCAL_PATH = "/catalogue/%s/catalogueline/%s/local";
+    public static String GET_CATALOG_LINE_PATH = "/catalogue/%s/catalogueline";
+    public static String GET_CATALOG_LINE_LOCAL_PATH = "/catalogue/%s/catalogueline/local";
     public static String GET_BINARY_CONTENT_PATH = "/binary-content";
     public static String GET_BINARY_CONTENT_LOCAL_PATH = "/binary-content/local";
     public static String GET_CATALOG_LINES_PATH = "/catalogue/%s/cataloguelines";
